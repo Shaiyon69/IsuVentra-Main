@@ -35,5 +35,15 @@ class ParticipationController extends Controller
         ]);
     }
 
+    public function delete(string $id)
+    {
+        $participation = Participation::find($id);
+        if (!$participation) {
+            return response()->json(['message' => 'Participation not found'], 404);
+        }
+        $participation->delete();
+        return response()->json(['message' => 'Participation deleted successfully'], 200);
+    }
+
     
 }

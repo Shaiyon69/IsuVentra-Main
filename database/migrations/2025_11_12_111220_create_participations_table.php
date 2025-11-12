@@ -13,8 +13,11 @@ return new class extends Migration
     {
         Schema::create('participations', function (Blueprint $table) {
             $table->id();
-            $table->integer('student_id');
-            $table->integer('event_id');
+
+            // Use foreignId instead of integer for relationships
+            $table->foreignId('student_id')->constrained('students')->onDelete('cascade');
+            $table->foreignId('event_id')->constrained('events')->onDelete('cascade');
+
             $table->dateTime('time_in')->nullable();
             $table->dateTime('time_out')->nullable();
             $table->timestamps();

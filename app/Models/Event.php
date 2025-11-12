@@ -13,4 +13,9 @@ class Event extends Model
         'description',
         'location'
     ];
+
+    public function participations()
+    {
+        return $this->hasMany(Participation::class);
+    }
 }

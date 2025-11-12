@@ -13,4 +13,9 @@ class Student extends Model
         'year_lvl',
         'campus'
     ];
+
+    public function participations()
+    {
+        return $this->hasMany(Participation::class);
+    }
 }

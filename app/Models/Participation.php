@@ -12,4 +12,14 @@ class Participation extends Model
         'time_in',
         'time_out'
     ];
+
+    public function student()
+    {
+        return $this->belongsTo(Student::class);
+    }
+
+    public function event()
+    {
+        return $this->belongsTo(Event::class);
+    }
 }
