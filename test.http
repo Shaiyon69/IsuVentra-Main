@@ -1,10 +1,11 @@
 ### Register a user
 POST http://localhost:8000/api/register
 Content-Type: application/json
+Accept: application/json
 
 {
-  "name": "John Doe",
-  "email": "john@example.com",
+  "name": "Abegail Bagguatan Membrado",
+  "email": "abiganda@example.com",
   "password": "secret123",
   "password_confirmation": "secret123"
 }
@@ -16,8 +17,11 @@ POST http://localhost:8000/api/login
 Content-Type: application/json
 
 {
-  "email": "john@example.com",
+  "email": "abiganda@example.com",
   "password": "secret123"
 }
 
 ###
+GET http://localhost:8000/api/user
+Accept: application/json
+Authorization: Bearer 5|wiMFIDjaQQVu51ZSrFUvSPLBNZ65mYMq3jZxXfzj70afde54

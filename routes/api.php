@@ -7,9 +7,9 @@ use App\Http\Controllers\StudentController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\ParticipationController;
 
-use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Auth\AuthController;
 
-Route::get('/user', function (Request $request) {
+Route::get('user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
@@ -17,35 +17,42 @@ Route::get('/user', function (Request $request) {
 
 // Fetch only (Open APIs)
 Route::name('api.')->group(function () {
-    Route::get('/students', [StudentController::class, 'index']);
-    Route::get('/students/{id}', [StudentController::class, 'show']);
 
-    Route::get('/events', [EventController::class, 'index']);
-    Route::get('/events/{id}', [EventController::class, 'show']);
+    Route::controller(StudentController::class)->group(function () {
+        Route::get('students', 'index');
+        Route::get('students/{id}', 'show');
+    });
 
-    Route::get('/participations', [ParticipationController::class, 'index']);
-    Route::get('/participations/{id}', [ParticipationController::class, 'show']);
+    Route::controller(EventController::class)->group(function () {
+        Route::get('events', 'index');
+        Route::get('events/{id}', 'show');
+    });
+
+    Route::controller(ParticipationController::class)->group(function () {
+        Route::get('participations', 'index');
+        Route::get('participations/{id}', 'show');
+    });
 }); 
 
 // Admin-only (Protected APIs)
 Route::middleware('auth:sanctum')->group(function () {
 
     Route::controller(ParticipationController::class)->group(function () {
-        Route::post('/participations', 'store');
-        Route::delete('/participations/{id}', 'destroy');
+        Route::post('participations', 'store');
+        Route::delete('participations/{id}', 'destroy');
     });
 
 
     Route::controller(EventController::class)->group(function () {
-        Route::post('/events', 'store');
-        Route::put('/events/{id}', 'update');
-        Route::delete('/events/{id}', 'destroy');
+        Route::post('events', 'store');
+        Route::put('events/{id}', 'update');
+        Route::delete('events/{id}', 'destroy');
     });
 
     Route::controller(StudentController::class)->group(function () {
-        Route::post('/students', 'store');
-        Route::put('/students/{id}', 'update');
-        Route::delete('/students/{id}', 'destroy');
+        Route::post('students', 'store');
+        Route::put('students/{id}', 'update');
+        Route::delete('students/{id}', 'destroy');
     });
 
 });
