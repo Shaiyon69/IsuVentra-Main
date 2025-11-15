@@ -1,4 +1,4 @@
-name: flutter_application_1
+name: isuvetra
 description: "A new Flutter project."
 publish_to: 'none'
 version: 0.1.0
@@ -9,6 +9,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  http: ^1.5.0
+  http_parser: ^4.0.2
+  shared_preferences: ^2.3.3
 
 dev_dependencies:
   flutter_test:
