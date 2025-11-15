@@ -24,7 +24,6 @@ import { ref, onMounted, onBeforeUnmount } from "vue";
 import { BrowserQRCodeReader } from "@zxing/browser";
 import api from "@/services/api";
 
-const showScanner = ref(true);
 const video = ref(null);
 const scannedEventId = ref(null);
 const qrDetected = ref(false);
@@ -32,42 +31,42 @@ const loading = ref(false);
 const error = ref(null);
 const lastScanned = ref(null);
 
-let codeReader;
+let codeReader = null;
 
-onMounted(async () => {
+
+onMounted(() => {
   codeReader = new BrowserQRCodeReader();
+  codeReader.decodeFromVideoDevice(null, video.value, (result, err) => {
+    if (result) {
+      qrDetected.value = true;
+      const eventId = result.getText().trim();
+      if (lastScanned.value === eventId) return;
+      lastScanned.value = eventId;
+      handleScan(eventId);
+    } else {
+      qrDetected.value = false;
+    }
 
-  try {
-    await codeReader.decodeFromVideoDevice(null, video.value, (result, err) => {
-      if (result) {
-        qrDetected.value = true;
-
-        const eventId = result.getText().trim();
-
-        // Prevent duplicate scans
-        if (lastScanned.value === eventId) return;
-        lastScanned.value = eventId;
-
-        handleScan(eventId);
-      } else {
-        qrDetected.value = false;
-      }
-
-      if (err && !(err.name === "NotFoundException")) {
-        console.warn(err);
-      }
-    });
-  } catch (err) {
+    if (err && err.name !== "NotFoundException") console.warn(err);
+  }).catch(err => {
     if (err.name === "NotAllowedError") error.value = "Camera access denied.";
     else if (err.name === "NotFoundError") error.value = "No camera found.";
     else error.value = "Camera initialization failed.";
+  });
+});
+
+
+onBeforeUnmount(() => {
+  if (codeReader && typeof codeReader.reset === "function") {
+    codeReader.reset();  // this stops the camera
+  } else if (video.value && video.value.srcObject) {
+    // fallback for older ZXing versions: stop tracks manually
+    const stream = video.value.srcObject;
+    stream.getTracks().forEach(track => track.stop());
+    video.value.srcObject = null;
   }
 });
 
-onBeforeUnmount(() => {
-  // just hide/unmount the scanner instead of calling reset()
-  showScanner.value = false;
-});
 
 const handleScan = async (eventId) => {
   scannedEventId.value = eventId;
