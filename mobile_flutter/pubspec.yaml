@@ -13,6 +13,9 @@ dependencies:
   http_parser: ^4.0.2
   shared_preferences: ^2.3.3
 
+  # scanner
+  mobile_scanner: ^5.2.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
