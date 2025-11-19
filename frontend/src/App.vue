@@ -49,14 +49,15 @@ onMounted(async () => {
 
 <style>
 :root {
-  --primary-bg: #2d4a22;
-  --secondary-bg: #4a6b3a;
-  --accent: #66bb6a;
+  --primary-bg: #ffffff;
+  --secondary-bg: #f5f5f5;
+  --accent: #4caf50;
   --light-accent: #81c784;
-  --text-color: #f1f8e9;
+  --outline-accent: #81c784;
+  --text-color: #2d4a22;
   --error-color: #ef5350;
   --success-color: #81c784;
-  --border-color: #6b8e5a;
+  --border-color: #e0e0e0;
 }
 
 #app {
@@ -93,7 +94,7 @@ nav a + a::before {
   content: "|";
   position: absolute;
   left: 0;
-  color: var(--light-accent);
+  color: var(--outline-accent);
 }
 
 /* active route highlight */

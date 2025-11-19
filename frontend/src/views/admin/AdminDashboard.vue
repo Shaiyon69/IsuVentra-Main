@@ -370,7 +370,7 @@ onMounted(() => {
   background: var(--secondary-bg);
   padding: 24px;
   color: var(--text-color);
-  border-right: 1px solid var(--border-color);
+  border-right: 2px solid var(--outline-accent);
   box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -391,9 +391,9 @@ onMounted(() => {
   width: 100%;
   margin-bottom: 0;
   padding: 12px 16px;
-  background-color: var(--accent);
-  color: var(--primary-bg);
-  border: none;
+  background-color: transparent;
+  color: var(--accent);
+  border: 2px solid var(--outline-accent);
   border-radius: 6px;
   font-weight: bold;
   cursor: pointer;
@@ -402,7 +402,8 @@ onMounted(() => {
 }
 
 .sidebar button:hover {
-  background-color: var(--light-accent);
+  background-color: var(--accent);
+  color: var(--primary-bg);
   transform: translateX(2px);
 }
 
@@ -429,15 +430,16 @@ onMounted(() => {
 }
 
 .card {
-  background: var(--secondary-bg);
+  background: rgba(102, 187, 106, 0.05);
   padding: 24px;
   border-radius: 12px;
-  border: 1px solid var(--border-color);
+  border: 2px solid var(--outline-accent);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.3s ease;
 }
 
 .card:hover {
+  background: rgba(102, 187, 106, 0.1);
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
@@ -474,11 +476,11 @@ onMounted(() => {
 }
 
 .widget {
-  background: var(--secondary-bg);
+  background: rgba(102, 187, 106, 0.05);
   padding: 20px;
   border-radius: 12px;
   margin-bottom: 24px;
-  border: 1px solid var(--border-color);
+  border: 2px solid var(--outline-accent);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -498,7 +500,7 @@ onMounted(() => {
 .widget li {
   color: var(--text-color);
   padding: 8px 0;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--outline-accent);
   font-size: 0.95em;
 }
 
@@ -509,10 +511,10 @@ onMounted(() => {
 table {
   width: 100%;
   border-collapse: collapse;
-  background: var(--secondary-bg);
+  background: rgba(102, 187, 106, 0.05);
   border-radius: 12px;
   overflow: hidden;
-  border: 1px solid var(--border-color);
+  border: 2px solid var(--outline-accent);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   margin-top: 16px;
 }
@@ -520,12 +522,12 @@ table {
 th, td {
   padding: 16px;
   text-align: left;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--outline-accent);
 }
 
 th {
-  background: var(--primary-bg);
-  color: var(--accent);
+  background: rgba(102, 187, 106, 0.1);
+  color: var(--text-color);
   font-weight: 600;
   font-size: 0.95em;
   text-transform: uppercase;
@@ -538,15 +540,15 @@ td {
 }
 
 tr:hover {
-  background: rgba(102, 187, 106, 0.08);
+  background: rgba(102, 187, 106, 0.15);
   transition: background-color 0.2s ease;
 }
 
 button {
   padding: 10px 16px;
-  background-color: var(--accent);
-  color: var(--primary-bg);
-  border: none;
+  background-color: transparent;
+  color: var(--accent);
+  border: 2px solid var(--outline-accent);
   border-radius: 6px;
   cursor: pointer;
   font-weight: 600;
@@ -556,7 +558,8 @@ button {
 }
 
 button:hover {
-  background-color: var(--light-accent);
+  background-color: var(--accent);
+  color: var(--primary-bg);
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
