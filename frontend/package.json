@@ -37,7 +37,10 @@
       "eslint:recommended"
     ],
     "parserOptions": {
-      "parser": "@babel/eslint-parser"
+      "parser": "@babel/eslint-parser",
+      "babelOptions": {
+        "presets": ["@vue/cli-plugin-babel/preset"]
+      }
     },
     "rules": {}
   },
