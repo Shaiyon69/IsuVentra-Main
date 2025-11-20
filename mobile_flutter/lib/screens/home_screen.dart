@@ -19,6 +19,8 @@ class _HomeScreenState extends State<HomeScreen> {
     QRScannerScreen(),
   ];
 
+  static const List<String> _titles = ['Profile', 'Events', 'Scanner'];
+
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -28,17 +30,12 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(title: Text(_titles[_selectedIndex])),
       body: _screens[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.event),
-            label: 'Events',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          BottomNavigationBarItem(icon: Icon(Icons.event), label: 'Events'),
           BottomNavigationBarItem(
             icon: Icon(Icons.qr_code_scanner),
             label: 'Scanner',

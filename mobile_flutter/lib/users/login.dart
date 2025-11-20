@@ -1,7 +1,7 @@
 import "package:flutter/material.dart";
 import '../services/auth_service.dart';
-import 'register.dart';
-import '../screens/event_list.dart';
+import '../app_providers_wrapper.dart';
+// import 'register.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -11,27 +11,41 @@ class Login extends StatefulWidget {
 }
 
 class _LoginState extends State<Login> {
+  final AuthService _authService = AuthService();
   TextEditingController txtEmail = TextEditingController();
   TextEditingController txtPassword = TextEditingController();
+  bool isLoading = false;
 
   void login() async {
     String email = txtEmail.text.trim();
     String password = txtPassword.text.trim();
 
-    bool success = await AuthService.login(email, password);
+    setState(() {
+      isLoading = true;
+    });
+
+    final loginData = await _authService.login(email, password);
 
     if (!mounted) return;
 
-    if (success) {
-      // Navigate to EventListScreen on success
+    setState(() {
+      isLoading = false;
+    });
+
+    if (loginData != null) {
+      if (!mounted) return;
+
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const EventListScreen()),
+        MaterialPageRoute(builder: (context) => const AppProvidersWrapper()),
       );
     } else {
-      // Show error message if login failed
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Invalid email or password")),
+        const SnackBar(
+          content: Text("Invalid email or password"),
+        ),
       );
     }
   }
@@ -50,6 +64,7 @@ class _LoginState extends State<Login> {
                 labelText: "Email",
                 border: OutlineInputBorder(),
               ),
+              enabled: !isLoading,
             ),
             const SizedBox(height: 10),
             TextField(
@@ -59,20 +74,25 @@ class _LoginState extends State<Login> {
                 border: OutlineInputBorder(),
               ),
               obscureText: true,
+              enabled: !isLoading,
             ),
             const SizedBox(height: 20),
-            ElevatedButton(onPressed: login, child: const Text("Login")),
+            isLoading
+                ? const CircularProgressIndicator()
+                : ElevatedButton(
+                    onPressed: login,
+                    child: const Text("Login"),
+                  ),
             const SizedBox(height: 10),
-            // Add the register button here
-            TextButton(
-              onPressed: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const Register()),
-                );
-              },
-              child: const Text("Don't have an account? Register"),
-            ),
+            // TextButton(
+            //   onPressed: () {
+            //     Navigator.pushReplacement(
+            //       context,
+            //       MaterialPageRoute(builder: (context) => const Register()),
+            //     );
+            //   },
+            //   child: const Text("Don't have an account? Register"),
+            // ),
           ],
         ),
       ),

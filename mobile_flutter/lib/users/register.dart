@@ -10,6 +10,7 @@ class Register extends StatefulWidget {
 }
 
 class _RegisterState extends State<Register> {
+  final AuthService _authService = AuthService();
   TextEditingController txtName = TextEditingController();
   TextEditingController txtEmail = TextEditingController();
   TextEditingController txtPassword = TextEditingController();
@@ -42,7 +43,7 @@ class _RegisterState extends State<Register> {
       return;
     }
 
-    bool success = await AuthService.register(
+    final registerData = await _authService.register(
       name,
       email,
       password,
@@ -51,7 +52,7 @@ class _RegisterState extends State<Register> {
 
     if (!mounted) return;
 
-    if (success) {
+    if (registerData != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Registration successful! Please log in.")),
       );

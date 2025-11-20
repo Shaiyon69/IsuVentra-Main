@@ -1,94 +1,97 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../variables.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  // GET request
-  static Future<http.Response> get(String endpoint) async {
-    final token = await _getToken();
+  // Singleton pattern
+  static final ApiService _instance = ApiService._internal();
+  factory ApiService() => _instance;
+  ApiService._internal();
 
+  // In-memory token storage (managed by AuthProvider)
+  String? _token;
+
+  // Token management
+  void setToken(String token) {
+    _token = token;
+  }
+
+  String? getToken() {
+    return _token;
+  }
+
+  void clearToken() {
+    _token = null;
+  }
+
+  bool get isAuthenticated => _token != null && _token!.isNotEmpty;
+
+  // HTTP Methods
+  Future<http.Response> get(String endpoint) async {
     return await http.get(
       Uri.parse('$baseUrl$endpoint'),
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        if (token != null) 'Authorization': 'Bearer $token',
-      },
+      headers: _buildHeaders(),
     );
   }
 
-  // POST request
-  static Future<http.Response> post(
+  Future<http.Response> post(
     String endpoint,
     Map<String, dynamic> data,
   ) async {
-    final token = await _getToken();
-
     return await http.post(
       Uri.parse('$baseUrl$endpoint'),
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        if (token != null) 'Authorization': 'Bearer $token',
-      },
+      headers: _buildHeaders(),
       body: jsonEncode(data),
     );
   }
 
-  // PUT request
-  static Future<http.Response> put(
+  Future<http.Response> put(
     String endpoint,
     Map<String, dynamic> data,
   ) async {
-    final token = await _getToken();
-
     return await http.put(
       Uri.parse('$baseUrl$endpoint'),
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        if (token != null) 'Authorization': 'Bearer $token',
-      },
+      headers: _buildHeaders(),
       body: jsonEncode(data),
     );
   }
 
-  // DELETE request
-  static Future<http.Response> delete(String endpoint) async {
-    final token = await _getToken();
-
+  Future<http.Response> delete(String endpoint) async {
     return await http.delete(
       Uri.parse('$baseUrl$endpoint'),
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        if (token != null) 'Authorization': 'Bearer $token',
-      },
+      headers: _buildHeaders(),
     );
   }
 
-  // Helper method to get token from SharedPreferences
-  static Future<String?> _getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('token');
+  // Private helper to build headers
+  Map<String, String> _buildHeaders() {
+    return {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      if (_token != null) 'Authorization': 'Bearer $_token',
+    };
   }
 
-  // Helper method to save token
-  static Future<void> saveToken(String token) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('token', token);
+  // Static methods for backward compatibility (to be removed eventually)
+  static Future<http.Response> staticGet(String endpoint) async {
+    return _instance.get(endpoint);
   }
 
-  // Helper method to remove token
-  static Future<void> removeToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('token');
+  static Future<http.Response> staticPost(
+    String endpoint,
+    Map<String, dynamic> data,
+  ) async {
+    return _instance.post(endpoint, data);
   }
 
-  // Helper method to check if user is authenticated
-  static Future<bool> isAuthenticated() async {
-    final token = await _getToken();
-    return token != null && token.isNotEmpty;
+  static Future<http.Response> staticPut(
+    String endpoint,
+    Map<String, dynamic> data,
+  ) async {
+    return _instance.put(endpoint, data);
+  }
+
+  static Future<http.Response> staticDelete(String endpoint) async {
+    return _instance.delete(endpoint);
   }
 }

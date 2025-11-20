@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screens/home_screen.dart';
 import 'users/login.dart';
-import 'services/auth_service.dart';
 
 void main() {
   runApp(const MainApp());
@@ -14,14 +12,8 @@ class MainApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        useMaterial3: true,
-      ),
-      home: const AuthCheck(
-        authenticatedScreen: HomeScreen(),
-        unauthenticatedScreen: Login(),
-      ),
+      theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
+      home: const Login(),
     );
   }
 }
