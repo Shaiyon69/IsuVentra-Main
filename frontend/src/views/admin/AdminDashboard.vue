@@ -101,34 +101,34 @@
         </table>
       </section>
 
-      <!-- Events Page -->
-      <section v-if="currentPage === 'events'">
-        <h1>Events</h1>
+  <!-- Events Page -->
+  <section v-if="currentPage === 'events'">
+    <h1>Events</h1>
 
-        <button @click="showAddEvent = true">Add Event</button>
+    <button @click="showAddEvent = true">Add Event</button>
 
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Location</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="e in events" :key="e.id">
-              <td>{{ e.name }}</td>
-              <td>{{ e.location }}</td>
-              <td>{{ e.is_ongoing ? "Ongoing" : "Closed" }}</td>
-              <td>
-                <button @click="editEvent(e)">Edit</button>
-                <button @click="deleteEvent(e.id)">Delete</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Location</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="e in events" :key="e.id">
+          <td>{{ e.title }}</td>
+          <td>{{ e.location }}</td>
+          <td>{{ e.is_ongoing ? "Ongoing" : "Closed" }}</td>
+          <td>
+            <button @click="editEvent(e)">Edit</button>
+            <button @click="deleteEvent(e.id)">Delete</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
 
       <!-- Participation Page -->
       <section v-if="currentPage === 'participation'">
@@ -225,7 +225,7 @@ function renderChart() {
   chartInstance = new Chart(chartCanvas.value, {
     type: "bar",
     data: {
-      labels: events.value.map((e) => e.name),
+      labels: events.value.map((e) => e.title),
       datasets: [
         {
           label: "Participation Count",
@@ -246,28 +246,79 @@ function renderMAChart() {
     return;
   }
 
-  const data = participationStats.value.map(stat => stat.count);
-  const labels = participationStats.value.map(stat => stat.date);
+  // Group data by year
+  const groupedData = {};
+  participationStats.value.forEach(stat => {
+    const year = new Date(stat.date).getFullYear();
+    if (!groupedData[year]) {
+      groupedData[year] = { dates: [], counts: [] };
+    }
+    groupedData[year].dates.push(stat.date);
+    groupedData[year].counts.push(stat.count);
+  });
 
-  // Compute 7-day moving average
-  const maData = [];
-  for (let i = 0; i < data.length; i++) {
-    const start = Math.max(0, i - 6);
-    const sum = data.slice(start, i + 1).reduce((a, b) => a + b, 0);
-    maData.push(sum / (i - start + 1));
-  }
+  const windowSize = 3;
+  const allLabels = [];
+  const allMaData = [];
+
+  // Calculate moving average per year group with forecast
+  Object.keys(groupedData).sort().forEach(year => {
+    const { dates, counts } = groupedData[year];
+    const maData = [];
+
+    // Check for minimum data length before calculation and forecast
+    if (counts.length < windowSize) {
+      console.warn(`Insufficient data for moving average for year ${year}`);
+      // Fill data with nulls for chart to handle gracefully
+      for (let i = 0; i < counts.length; i++) {
+        maData.push(null);
+      }
+      // No forecast points added
+      allLabels.push(...dates);
+      allMaData.push(...maData);
+      return;
+    }
+
+    for (let i = 0; i < counts.length; i++) {
+      const start = Math.max(0, i - (windowSize - 1));
+      const sum = counts.slice(start, i + 1).reduce((a, b) => a + b, 0);
+      maData.push(sum / (i - start + 1));
+    }
+
+    // Forecast 3 future points by extending the moving average
+    for (let i = 0; i < 3; i++) {
+      const start = maData.length - (windowSize - 1);
+      const sum = maData.slice(start).reduce((a, b) => a + b, 0);
+      maData.push(sum / windowSize);
+    }
+
+    // Extend dates for forecast points; assume daily increment
+    const lastDateObj = new Date(dates[dates.length - 1]);
+    const forecastDates = [];
+    for (let i = 1; i <= 3; i++) {
+      const nextDate = new Date(lastDateObj);
+      nextDate.setDate(nextDate.getDate() + i);
+      forecastDates.push(nextDate.toISOString().slice(0, 10));
+    }
+
+    // Append to overall labels and data
+    allLabels.push(...dates, ...forecastDates);
+    allMaData.push(...maData);
+  });
 
   maChartInstance = new Chart(maChartCanvas.value, {
     type: "line",
     data: {
-      labels: labels,
+      labels: allLabels,
       datasets: [
         {
-          label: "7-Day Moving Average",
-          data: maData,
+          label: "3-Point Moving Average",
+          data: allMaData,
           borderColor: "rgba(75, 192, 192, 1)",
           backgroundColor: "rgba(75, 192, 192, 0.2)",
           fill: true,
+          borderDash: [],
+          pointRadius: 3,
         },
       ],
     },
@@ -278,18 +329,18 @@ function renderMAChart() {
           display: true,
           title: {
             display: true,
-            text: 'Date'
-          }
+            text: 'Date',
+          },
         },
         y: {
           display: true,
           title: {
             display: true,
-            text: 'Participation Count'
-          }
-        }
-      }
-    }
+            text: 'Participation Count',
+          },
+        },
+      },
+    },
   });
 }
 
@@ -303,30 +354,78 @@ function renderESChart() {
     return;
   }
 
-  const data = participationStats.value.map(stat => stat.count);
-  const labels = participationStats.value.map(stat => stat.date);
+  // Group data by year
+  const groupedData = {};
+  participationStats.value.forEach(stat => {
+    const year = new Date(stat.date).getFullYear();
+    if (!groupedData[year]) {
+      groupedData[year] = { dates: [], counts: [] };
+    }
+    groupedData[year].dates.push(stat.date);
+    groupedData[year].counts.push(stat.count);
+  });
 
-  // Compute exponential smoothing with alpha=0.3
   const alpha = 0.3;
-  const esData = [];
-  let smoothed = data[0] || 0;
-  esData.push(smoothed);
-  for (let i = 1; i < data.length; i++) {
-    smoothed = alpha * data[i] + (1 - alpha) * smoothed;
+  const allLabels = [];
+  const allEsData = [];
+
+  // Compute exponential smoothing and forecast per year group
+  Object.keys(groupedData).sort().forEach(year => {
+    const { dates, counts } = groupedData[year];
+    const esData = [];
+
+    // Check for minimum data length before calculation and forecast
+    if (counts.length < 1) {
+      console.warn(`Insufficient data for exponential smoothing for year ${year}`);
+      // Fill with nulls for graceful handling
+      for (let i = 0; i < counts.length; i++) {
+        esData.push(null);
+      }
+      allLabels.push(...dates);
+      allEsData.push(...esData);
+      return;
+    }
+
+    let smoothed = counts[0] || 0;
     esData.push(smoothed);
-  }
+
+    for (let i = 1; i < counts.length; i++) {
+      smoothed = alpha * counts[i] + (1 - alpha) * smoothed;
+      esData.push(smoothed);
+    }
+
+    // Forecast 3 future points using last smoothed value (simple level forecasting)
+    for (let i = 0; i < 3; i++) {
+      // Just repeat last smoothed value - no self assignment needed
+      esData.push(smoothed);
+    }
+
+    // Extend labels for forecast dates with daily increments
+    const lastDateObj = new Date(dates[dates.length - 1]);
+    const forecastDates = [];
+    for (let i = 1; i <= 3; i++) {
+      const nextDate = new Date(lastDateObj);
+      nextDate.setDate(nextDate.getDate() + i);
+      forecastDates.push(nextDate.toISOString().slice(0, 10));
+    }
+
+    allLabels.push(...dates, ...forecastDates);
+    allEsData.push(...esData);
+  });
 
   esChartInstance = new Chart(esChartCanvas.value, {
     type: "line",
     data: {
-      labels: labels,
+      labels: allLabels,
       datasets: [
         {
           label: "Exponential Smoothing (α=0.3)",
-          data: esData,
+          data: allEsData,
           borderColor: "rgba(255, 99, 132, 1)",
           backgroundColor: "rgba(255, 99, 132, 0.2)",
           fill: true,
+          borderDash: [],
+          pointRadius: 3,
         },
       ],
     },
@@ -337,18 +436,18 @@ function renderESChart() {
           display: true,
           title: {
             display: true,
-            text: 'Date'
-          }
+            text: 'Date',
+          },
         },
         y: {
           display: true,
           title: {
             display: true,
-            text: 'Participation Count'
-          }
-        }
-      }
-    }
+            text: 'Participation Count',
+          },
+        },
+      },
+    },
   });
 }
 
