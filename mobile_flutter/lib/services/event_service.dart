@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import '../models/event.dart';
 import 'api_service.dart';
 
@@ -13,11 +14,11 @@ class EventService {
         final List<dynamic> data = jsonDecode(response.body);
         return data.map((json) => Event.fromJson(json)).toList();
       } else {
-        print('Get events failed: ${response.statusCode}');
+        debugPrint('Get events failed: ${response.statusCode}');
         return [];
       }
     } catch (e) {
-      print('Get events error: $e');
+      debugPrint('Get events error: $e');
       return [];
     }
   }
@@ -30,11 +31,11 @@ class EventService {
         final data = jsonDecode(response.body);
         return Event.fromJson(data);
       } else {
-        print('Get event failed: ${response.statusCode}');
+        debugPrint('Get event failed: ${response.statusCode}');
         return null;
       }
     } catch (e) {
-      print('Get event error: $e');
+      debugPrint('Get event error: $e');
       return null;
     }
   }
@@ -44,17 +45,20 @@ class EventService {
       final response = await _apiService.post('/events', event.toJson());
       return response.statusCode == 201 || response.statusCode == 200;
     } catch (e) {
-      print('Create event error: $e');
+      debugPrint('Create event error: $e');
       return false;
     }
   }
 
   Future<bool> updateEvent(Event event) async {
     try {
-      final response = await _apiService.put('/events/${event.id}', event.toJson());
+      final response = await _apiService.put(
+        '/events/${event.id}',
+        event.toJson(),
+      );
       return response.statusCode == 200;
     } catch (e) {
-      print('Update event error: $e');
+      debugPrint('Update event error: $e');
       return false;
     }
   }
@@ -64,7 +68,7 @@ class EventService {
       final response = await _apiService.delete('/events/$id');
       return response.statusCode == 200 || response.statusCode == 204;
     } catch (e) {
-      print('Delete event error: $e');
+      debugPrint('Delete event error: $e');
       return false;
     }
   }

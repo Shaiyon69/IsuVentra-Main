@@ -15,7 +15,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<UserProvider>(context, listen: false).loadUser();
     });
   }
@@ -28,12 +28,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
           return const Center(child: CircularProgressIndicator());
         }
 
+        final userMap = userProvider.currentUser;
+
         return SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // const Text(
+                    //   'Student Profile',
+                    //   style: TextStyle(
+                    //     fontSize: 22,
+                    //     fontWeight: FontWeight.bold,
+                    //   ),
+                    // ),
+                    // IconButton(
+                    //   onPressed: () async {
+                    //     await userProvider.refreshUser();
+                    //   },
+                    //   icon: const Icon(Icons.refresh),
+                    // ),
+                  ],
+                ),
+                const SizedBox(height: 8),
                 Center(
                   child: CircleAvatar(
                     radius: 50,
@@ -42,11 +63,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       userProvider.name.isNotEmpty
                           ? userProvider.name[0].toUpperCase()
                           : 'G',
-                      style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 40,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
+
+                // Basic user info
                 _buildInfoCard(
                   icon: Icons.person,
                   label: 'Name',
@@ -58,7 +84,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   label: 'Email',
                   value: userProvider.email,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 24),
+
+                // Student-specific info
+                const Text(
+                  'Student Information',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+
                 _buildInfoCard(
                   icon: Icons.badge,
                   label: 'Student ID',
@@ -90,19 +124,74 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ? userProvider.campus
                       : 'Not available',
                 ),
+
                 const SizedBox(height: 24),
+
+                // Raw/extra info for debugging or extra fields
+                if (userMap != null && userMap.isNotEmpty) ...[
+                  Card(
+                    elevation: 2,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Other details',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          for (final entry in userMap.entries)
+                            if (entry.key != 'name' && entry.key != 'email')
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 4.0,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      '${entry.key}: ',
+                                      style: const TextStyle(
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Text(
+                                        entry.value?.toString() ?? '',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+
                 Center(
                   child: ElevatedButton.icon(
                     onPressed: () async {
-                      final authProvider =
-                          Provider.of<AuthProvider>(context, listen: false);
+                      final authProvider = Provider.of<AuthProvider>(
+                        context,
+                        listen: false,
+                      );
                       await authProvider.logout();
                       userProvider.clearUser();
 
                       if (context.mounted) {
                         Navigator.pushReplacement(
                           context,
-                          MaterialPageRoute(builder: (context) => const Login()),
+                          MaterialPageRoute(
+                            builder: (context) => const Login(),
+                          ),
                         );
                       }
                     },
@@ -126,6 +215,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  // Remove this on later builds or change it to different one -Shaine
   Widget _buildInfoCard({
     required IconData icon,
     required String label,

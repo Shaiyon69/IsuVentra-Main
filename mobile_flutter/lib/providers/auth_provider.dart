@@ -6,21 +6,18 @@ class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
   final ApiService _apiService = ApiService();
 
-  // State
   bool _isAuthenticated = false;
   bool _isLoading = false;
   String? _errorMessage;
   String? _token;
   Map<String, dynamic>? _currentUser;
 
-  // Getters
   bool get isAuthenticated => _isAuthenticated;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   String? get token => _token;
   Map<String, dynamic>? get currentUser => _currentUser;
 
-  // User data getters
   String get userName => _currentUser?['name'] ?? 'Guest';
   String get userEmail => _currentUser?['email'] ?? '';
   String get userStudentId => _currentUser?['student_id']?.toString() ?? '';
@@ -118,7 +115,6 @@ class AuthProvider extends ChangeNotifier {
 
     await _authService.logout();
 
-    // Clear all state
     _apiService.clearToken();
     _token = null;
     _currentUser = null;
@@ -137,7 +133,7 @@ class AuthProvider extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      print('Error refreshing user: $e');
+      debugPrint('Error refreshing user: $e');
     }
   }
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'profile_screen.dart';
-import 'event_list.dart';
+import 'event_list_screen.dart';
 import 'qr_scanner_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -13,7 +13,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
-  static const List<Widget> _screens = [
+  final List<Widget> _screens = [
     ProfileScreen(),
     EventListScreen(),
     QRScannerScreen(),
