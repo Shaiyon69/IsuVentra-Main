@@ -3,15 +3,12 @@ import 'package:http/http.dart' as http;
 import '../variables.dart';
 
 class ApiService {
-  // Singleton pattern
   static final ApiService _instance = ApiService._internal();
   factory ApiService() => _instance;
   ApiService._internal();
 
-  // In-memory token storage (managed by AuthProvider)
   String? _token;
 
-  // Token management
   void setToken(String token) {
     _token = token;
   }
@@ -26,7 +23,6 @@ class ApiService {
 
   bool get isAuthenticated => _token != null && _token!.isNotEmpty;
 
-  // HTTP Methods
   Future<http.Response> get(String endpoint) async {
     return await http.get(
       Uri.parse('$baseUrl$endpoint'),
@@ -63,7 +59,6 @@ class ApiService {
     );
   }
 
-  // Private helper to build headers
   Map<String, String> _buildHeaders() {
     return {
       'Accept': 'application/json',
@@ -72,7 +67,6 @@ class ApiService {
     };
   }
 
-  // Static methods for backward compatibility (to be removed eventually)
   static Future<http.Response> staticGet(String endpoint) async {
     return _instance.get(endpoint);
   }

@@ -11,7 +11,27 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Middleware\AdminCheck;
 
 Route::get('user', function (Request $request) {
-    return $request->user();
+    $user = $request->user();
+    // Load student relation if exists
+    $user->loadMissing('student');
+
+    $response = [
+        'id' => $user->id,
+        'name' => $user->name,
+        'email' => $user->email,
+        'is_admin' => $user->is_admin,
+    ];
+
+    if ($user->student) {
+        $student = $user->student;
+        $response['student_id'] = $student->student_id;
+        $response['course'] = $student->course;
+        // normalize backend field 'year_lvl' to 'year_level' expected by the mobile app
+        $response['year_level'] = $student->year_lvl;
+        $response['campus'] = $student->campus;
+    }
+
+    return response()->json($response);
 })->middleware('auth:sanctum');
 
 // API Routes
@@ -34,12 +54,12 @@ Route::name('api.')->group(function () {
         Route::get('participation/{id}', 'show');
         Route::get('participation/stats', 'getParticipationStats')->middleware([AdminCheck::class]);
     });
-}); 
+});
 
 // Authorized-only (Protected APIs)
 Route::middleware('auth:sanctum')->group(function () {
 
-    //Students can only attend (POST) participations 
+    //Students can only attend (POST) participations
     Route::controller(ParticipationController::class)->group(function () {
         Route::post('participations', 'store');
         Route::delete('participations/{id}', 'destroy')->middleware([AdminCheck::class]);

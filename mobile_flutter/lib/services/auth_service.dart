@@ -14,7 +14,6 @@ class AuthService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
-        // Return the full response data (token + user)
         return {
           'token': data["access_token"],
           'user': data.containsKey("user") ? data["user"] : null,
@@ -29,7 +28,6 @@ class AuthService {
     }
   }
 
-  // Register method
   Future<Map<String, dynamic>?> register(
     String name,
     String email,
@@ -46,7 +44,6 @@ class AuthService {
 
       print('Register: ${response.statusCode} - ${response.body}');
 
-      // Registration returns 201 on success
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
         return data;

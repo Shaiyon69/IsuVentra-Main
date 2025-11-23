@@ -1,6 +1,7 @@
 import "package:flutter/material.dart";
 import '../services/auth_service.dart';
 import '../app_providers_wrapper.dart';
+import '../services/api_service.dart';
 // import 'register.dart';
 
 class Login extends StatefulWidget {
@@ -33,6 +34,9 @@ class _LoginState extends State<Login> {
     });
 
     if (loginData != null) {
+      if (loginData['token'] != null) {
+        ApiService().setToken(loginData['token']);
+      }
       if (!mounted) return;
 
       Navigator.pushReplacement(
@@ -43,9 +47,7 @@ class _LoginState extends State<Login> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Invalid email or password"),
-        ),
+        const SnackBar(content: Text("Invalid email or password")),
       );
     }
   }
@@ -79,10 +81,7 @@ class _LoginState extends State<Login> {
             const SizedBox(height: 20),
             isLoading
                 ? const CircularProgressIndicator()
-                : ElevatedButton(
-                    onPressed: login,
-                    child: const Text("Login"),
-                  ),
+                : ElevatedButton(onPressed: login, child: const Text("Login")),
             const SizedBox(height: 10),
             // TextButton(
             //   onPressed: () {
