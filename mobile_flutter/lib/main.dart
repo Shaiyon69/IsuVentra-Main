@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'users/login.dart';
+import 'package:provider/provider.dart';
+import 'providers/auth_provider.dart';
+import 'auth/login.dart';
 
 void main() {
   runApp(const MainApp());
@@ -10,10 +12,13 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
-      home: const Login(),
+    return ChangeNotifierProvider(
+      create: (_) => AuthProvider(),
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
+        home: const Login(),
+      ),
     );
   }
 }

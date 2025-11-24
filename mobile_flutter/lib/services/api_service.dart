@@ -30,10 +30,7 @@ class ApiService {
     );
   }
 
-  Future<http.Response> post(
-    String endpoint,
-    Map<String, dynamic> data,
-  ) async {
+  Future<http.Response> post(String endpoint, Map<String, dynamic> data) async {
     return await http.post(
       Uri.parse('$baseUrl$endpoint'),
       headers: _buildHeaders(),
@@ -41,10 +38,7 @@ class ApiService {
     );
   }
 
-  Future<http.Response> put(
-    String endpoint,
-    Map<String, dynamic> data,
-  ) async {
+  Future<http.Response> put(String endpoint, Map<String, dynamic> data) async {
     return await http.put(
       Uri.parse('$baseUrl$endpoint'),
       headers: _buildHeaders(),

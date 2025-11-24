@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_provider.dart';
 import '../providers/auth_provider.dart';
-import '../users/login.dart';
+import '../auth/login.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -189,9 +189,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       if (context.mounted) {
                         Navigator.pushReplacement(
                           context,
-                          MaterialPageRoute(
-                            builder: (context) => const Login(),
-                          ),
+                          MaterialPageRoute(builder: (context) => Login()),
                         );
                       }
                     },

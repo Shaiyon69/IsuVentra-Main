@@ -1,108 +1,79 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
 
+/// Consolidated AuthProvider that handles login/logout, token management,
+/// and optional "remember me" persistence.
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
   final ApiService _apiService = ApiService();
 
-  bool _isAuthenticated = false;
   bool _isLoading = false;
-  String? _errorMessage;
   String? _token;
   Map<String, dynamic>? _currentUser;
+  String? savedEmail;
+  bool rememberMe = false;
 
-  bool get isAuthenticated => _isAuthenticated;
   bool get isLoading => _isLoading;
-  String? get errorMessage => _errorMessage;
   String? get token => _token;
   Map<String, dynamic>? get currentUser => _currentUser;
 
-  String get userName => _currentUser?['name'] ?? 'Guest';
-  String get userEmail => _currentUser?['email'] ?? '';
-  String get userStudentId => _currentUser?['student_id']?.toString() ?? '';
-  String get userCourse => _currentUser?['course'] ?? '';
-  String get userYearLevel => _currentUser?['year_level']?.toString() ?? '';
-  String get userCampus => _currentUser?['campus'] ?? '';
-
   AuthProvider() {
-    _checkAuthStatus();
+    loadFromStorage();
   }
 
-  Future<void> _checkAuthStatus() async {
-    _isLoading = true;
-    notifyListeners();
+  Future<void> loadFromStorage() async {
+    final prefs = await SharedPreferences.getInstance();
+    savedEmail = prefs.getString('savedEmail');
+    _token = prefs.getString('savedToken');
+    rememberMe = prefs.getBool('rememberMe') ?? false;
 
-    _isAuthenticated = _apiService.isAuthenticated;
+    if (_token != null && _token!.isNotEmpty) {
+      _apiService.setToken(_token!);
+    }
 
-    _isLoading = false;
     notifyListeners();
   }
 
-  Future<bool> login(String email, String password) async {
+  Future<bool> login(
+    String email,
+    String password, {
+    required bool remember,
+  }) async {
     _isLoading = true;
-    _errorMessage = null;
     notifyListeners();
 
     try {
       final loginData = await _authService.login(email, password);
+      _isLoading = false;
 
-      if (loginData != null) {
+      if (loginData != null && loginData['token'] != null) {
         _token = loginData['token'];
         _currentUser = loginData['user'];
+        savedEmail = email;
+        rememberMe = remember;
 
         _apiService.setToken(_token!);
 
-        _isAuthenticated = true;
-        _errorMessage = null;
+        final prefs = await SharedPreferences.getInstance();
+        if (remember) {
+          await prefs.setBool('rememberMe', true);
+          await prefs.setString('savedEmail', email);
+          await prefs.setString('savedToken', _token!);
+        } else {
+          await prefs.remove('rememberMe');
+          await prefs.remove('savedEmail');
+          await prefs.remove('savedToken');
+        }
 
-        _isLoading = false;
         notifyListeners();
         return true;
-      } else {
-        _errorMessage = 'Invalid email or password';
-        _isLoading = false;
-        notifyListeners();
-        return false;
       }
-    } catch (e) {
-      _errorMessage = 'Login failed: $e';
-      _isLoading = false;
+
       notifyListeners();
       return false;
-    }
-  }
-
-  Future<bool> register(
-    String name,
-    String email,
-    String password,
-    String confirmPassword,
-  ) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
-
-    try {
-      final registerData = await _authService.register(
-        name,
-        email,
-        password,
-        confirmPassword,
-      );
-
-      if (registerData != null) {
-        _isLoading = false;
-        notifyListeners();
-        return true;
-      } else {
-        _errorMessage = 'Registration failed';
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
     } catch (e) {
-      _errorMessage = 'Registration failed: $e';
       _isLoading = false;
       notifyListeners();
       return false;
@@ -110,18 +81,14 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
-    _isLoading = true;
-    notifyListeners();
-
-    await _authService.logout();
-
-    _apiService.clearToken();
     _token = null;
-    _currentUser = null;
-    _isAuthenticated = false;
-    _errorMessage = null;
-
-    _isLoading = false;
+    rememberMe = false;
+    savedEmail = null;
+    _apiService.clearToken();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('rememberMe');
+    await prefs.remove('savedEmail');
+    await prefs.remove('savedToken');
     notifyListeners();
   }
 
@@ -135,10 +102,5 @@ class AuthProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('Error refreshing user: $e');
     }
-  }
-
-  void clearError() {
-    _errorMessage = null;
-    notifyListeners();
   }
 }

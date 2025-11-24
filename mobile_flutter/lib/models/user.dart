@@ -21,11 +21,6 @@ class User {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'email': email,
-      'is_admin': isAdmin,
-    };
+    return {'id': id, 'name': name, 'email': email, 'is_admin': isAdmin};
   }
 }
