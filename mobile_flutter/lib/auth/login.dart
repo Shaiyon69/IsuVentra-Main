@@ -78,9 +78,12 @@ class _LoginState extends State<Login> {
         child: Container(
           width: double.infinity,
           height: double.infinity,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFF4A90E2), Color(0xFF7B61FF)],
+              colors: [
+                Theme.of(context).colorScheme.primary,
+                Theme.of(context).colorScheme.primaryContainer,
+              ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -166,18 +169,22 @@ class _LoginState extends State<Login> {
                             const SizedBox(height: 6),
                             Center(
                               child: Column(
-                                children: const [
+                                children: [
                                   CircleAvatar(
                                     radius: 36,
-                                    backgroundColor: Color(0xFFF0F4FF),
+                                    backgroundColor: Theme.of(
+                                      context,
+                                    ).colorScheme.primaryContainer,
                                     child: Icon(
                                       Icons.event,
                                       size: 36,
-                                      color: Color(0xFF4A90E2),
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary,
                                     ),
                                   ),
-                                  SizedBox(height: 12),
-                                  Text(
+                                  const SizedBox(height: 12),
+                                  const Text(
                                     'ISUVENTRA',
                                     style: TextStyle(
                                       fontSize: 20,
@@ -272,11 +279,13 @@ class _LoginState extends State<Login> {
                                   ),
                                 ),
                                 child: isLoading
-                                    ? const SizedBox(
+                                    ? SizedBox(
                                         width: 24,
                                         height: 24,
                                         child: CircularProgressIndicator(
-                                          color: Colors.white,
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onPrimary,
                                           strokeWidth: 2,
                                         ),
                                       )

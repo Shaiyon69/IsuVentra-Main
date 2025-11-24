@@ -62,7 +62,7 @@ class _EventListScreenState extends State<EventListScreen> {
           children: [
             Text(
               provider.errorMessage!,
-              style: const TextStyle(color: Colors.red),
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),

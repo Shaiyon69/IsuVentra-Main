@@ -5,20 +5,22 @@ class QRScannerScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    final placeholderColor = Theme.of(context).colorScheme.onSurfaceVariant;
+
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.qr_code_scanner, size: 80, color: Colors.grey),
-          SizedBox(height: 20),
+          Icon(Icons.qr_code_scanner, size: 80, color: placeholderColor),
+          const SizedBox(height: 20),
           Text(
             'QR Scanner Placeholder',
-            style: TextStyle(fontSize: 18, color: Colors.grey),
+            style: TextStyle(fontSize: 18, color: placeholderColor),
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           Text(
             'Camera view will be displayed here',
-            style: TextStyle(fontSize: 14, color: Colors.grey),
+            style: TextStyle(fontSize: 14, color: placeholderColor),
           ),
         ],
       ),
