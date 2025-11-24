@@ -7,45 +7,33 @@ use App\Models\Participation;
 
 class ParticipationController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    // ============================
+    // Standard CRUD / Scan / Timeout
+    // ============================
     public function index()
     {
         $participations = Participation::with(['student', 'event'])
             ->orderBy('time_in', 'desc')
             ->get()
-            ->map(function ($participation) {
+            ->map(function ($p) {
                 return [
-                    'id' => $participation->id,
-                    'student_id' => $participation->student_id,
-                    'event_id' => $participation->event_id,
-                    'student_name' => $participation->student->name,
-                    'event_name' => $participation->event->title,
-                    'time_in' => $participation->time_in,
-                    'time_out' => $participation->time_out,
+                    'id' => $p->id,
+                    'student_id' => $p->student_id,
+                    'event_id' => $p->event_id,
+                    'student_name' => $p->student->name,
+                    'event_name' => $p->event->title,
+                    'time_in' => $p->time_in,
+                    'time_out' => $p->time_out,
                 ];
             });
+
         return response()->json($participations);
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(string $id)
     {
         $participation = Participation::find($id);
         return response()->json($participation);
-    }
-
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'student_id' => 'required|integer|exists:students,id',
-            'event_id' => 'required|integer|exists:events,id',
-            'time_in' => 'required|date_format:Y-m-d H:i:s',
-            'time_out' => 'nullable|date_format:Y-m-d H:i:s|after:time_in',
-        ]);
     }
 
     public function delete(string $id)
@@ -59,49 +47,44 @@ class ParticipationController extends Controller
     }
 
     public function scan(Request $request)
-{
-    $request->validate([
-        'event_id' => 'required|exists:events,id',
-    ]);
+    {
+        $request->validate([
+            'event_id' => 'required|exists:events,id',
+        ]);
 
-    $user = $request->user();
+        $user = $request->user();
+        $student = $user->student;
 
-    // Ensure the user has a linked student record
-    $student = $user->student;
-    if (!$student) {
+        if (!$student) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No student record linked to this user.'
+            ], 422);
+        }
+
+        $participation = Participation::where('student_id', $student->id)
+            ->where('event_id', $request->event_id)
+            ->first();
+
+        if ($participation) {
+            return response()->json([
+                'status' => 'already_in',
+                'message' => 'You are already participating in this event.'
+            ]);
+        }
+
+        Participation::create([
+            'student_id' => $student->id,
+            'event_id' => $request->event_id,
+            'time_in' => now(),
+        ]);
+
         return response()->json([
-            'status' => 'error',
-            'message' => 'No student record linked to this user.'
-        ], 422);
-    }
-
-    $eventId = $request->event_id;
-
-    $participation = Participation::where('student_id', $student->id)
-        ->where('event_id', $eventId)
-        ->first();
-
-    if ($participation) {
-        return response()->json([
-            'status' => 'already_in',
-            'message' => 'You are already participating in this event.'
+            'status' => 'joined',
+            'message' => 'Participation recorded!'
         ]);
     }
 
-    Participation::create([
-        'student_id' => $student->id,
-        'event_id' => $eventId,
-        'time_in' => now(),
-    ]);
-
-    return response()->json([
-        'status' => 'joined',
-        'message' => 'Participation recorded!'
-    ]);
-}
-
-
-    // Time out from event
     public function timeOut(Request $request)
     {
         $request->validate([
@@ -132,24 +115,156 @@ class ParticipationController extends Controller
         ]);
     }
 
-    /**
-     * Get participation statistics (daily counts)
-     */
-    public function getParticipationStats()
+    // ====================================
+    //  FORECAST METHODS (PER YEAR)
+    // ====================================
+    private function calculateMovingAverage($data, $window = 3)
     {
-        $stats = Participation::selectRaw('DATE(time_in) as date, COUNT(*) as count')
-            ->whereNotNull('time_in')
-            ->groupBy('date')
-            ->orderBy('date', 'asc')
-            ->get()
-            ->map(function ($stat) {
-                return [
-                    'date' => $stat->date,
-                    'count' => (int) $stat->count,
-                ];
-            });
-
-        return response()->json($stats);
+        $result = [];
+        $count = count($data);
+        
+        for ($i = 0; $i < $count; $i++) {
+            // Need at least 'window' data points to calculate average
+            if ($i < $window - 1) {
+                $result[] = null; // not enough data for full window
+                continue;
+            }
+            
+            // Get the slice of data for this window
+            $slice = array_slice($data, $i - $window + 1, $window);
+            $result[] = array_sum($slice) / $window;
+        }
+        
+        return $result;
     }
 
+    private function calculateExponentialSmoothing($data, $alpha = 0.3)
+    {
+        if (empty($data)) {
+            return [];
+        }
+
+        $result = [];
+        $result[0] = $data[0];
+
+        for ($i = 1; $i < count($data); $i++) {
+            $result[$i] = $alpha * $data[$i] + (1 - $alpha) * $result[$i - 1];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Generate forecast values for future periods
+     * Uses trend from smoothed data
+     */
+    private function generateForecasts($smoothedData, $horizon = 3)
+    {
+        if (empty($smoothedData) || count($smoothedData) < 2) {
+            return array_fill(0, $horizon, null);
+        }
+
+        // Calculate trend from last few smoothed values
+        $lastValue = end($smoothedData);
+        $secondLastValue = $smoothedData[count($smoothedData) - 2];
+        $trend = $lastValue - $secondLastValue;
+
+        // Generate forecasts
+        $forecasts = [];
+        for ($i = 1; $i <= $horizon; $i++) {
+            $forecast = $lastValue + ($trend * $i);
+            // Ensure forecast is not negative
+            $forecasts[] = max(0, round($forecast, 2));
+        }
+
+        return $forecasts;
+    }
+
+    // ====================================
+    //  FORECAST ENDPOINT (PER EVENT)
+    // ====================================
+    public function getParticipationForecastPerYear()
+    {
+        $participations = Participation::with('event')->get();
+
+        if ($participations->isEmpty()) {
+            return response()->json([
+                'events' => []
+            ]);
+        }
+
+        // Group by event name, then by year
+        $groupedByEvent = [];
+        foreach ($participations as $p) {
+            if ($p->time_in && $p->event) {
+                $eventName = $p->event->title;
+                $year = $p->time_in->format('Y');
+
+                if (!isset($groupedByEvent[$eventName])) {
+                    $groupedByEvent[$eventName] = [];
+                }
+                if (!isset($groupedByEvent[$eventName][$year])) {
+                    $groupedByEvent[$eventName][$year] = 0;
+                }
+                $groupedByEvent[$eventName][$year]++;
+            }
+        }
+
+        $eventsForecast = [];
+        foreach ($groupedByEvent as $eventName => $yearlyData) {
+            // Sort years chronologically
+            ksort($yearlyData);
+
+            $years = array_keys($yearlyData);
+            $actualCounts = array_values($yearlyData);
+
+            // Check if we have enough data points for forecasting
+            if (count($years) < 2) {
+                $eventsForecast[$eventName] = [
+                    'message' => 'Not enough participation data for forecasting this event. At least 2 years of historical data are required.',
+                    'available_years' => count($years),
+                    'years' => $years,
+                    'actual' => $actualCounts,
+                    'moving_average' => [],
+                    'exponential_smoothing' => [],
+                    'forecast_years' => [],
+                    'forecast_exponential' => [],
+                    'forecast_moving_average' => []
+                ];
+                continue;
+            }
+
+            // Calculate smoothing methods
+            $movingAvg = $this->calculateMovingAverage($actualCounts, 3);
+            $expSmooth = $this->calculateExponentialSmoothing($actualCounts, 0.3);
+
+            // Generate forecasts for next 3 years using exponential smoothing
+            $forecastsExp = $this->generateForecasts($expSmooth, 3);
+
+            // Generate forecasts for next 3 years using moving average (use non-null values)
+            $nonNullMoving = array_values(array_filter($movingAvg, fn($v) => $v !== null));
+            $forecastsMoving = $this->generateForecasts($nonNullMoving, 3);
+
+            $lastYear = (int) end($years);
+            $forecastYears = [
+                (string) ($lastYear + 1),
+                (string) ($lastYear + 2),
+                (string) ($lastYear + 3)
+            ];
+
+            $eventsForecast[$eventName] = [
+                'years' => $years,
+                'actual' => $actualCounts,
+                'moving_average' => $movingAvg,
+                'exponential_smoothing' => $expSmooth,
+                'forecast_years' => $forecastYears,
+                'forecast_exponential' => $forecastsExp,
+                'forecast_moving_average' => $forecastsMoving
+            ];
+        }
+
+        return response()->json([
+            'events' => $eventsForecast
+        ]);
+    }
 }

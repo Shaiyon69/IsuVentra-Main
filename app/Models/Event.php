@@ -16,6 +16,11 @@ class Event extends Model
         'location'
     ];
 
+    protected $casts = [
+        'time_start' => 'datetime',
+        'time_end' => 'datetime',
+    ];
+
     public function participations()
     {
         return $this->hasMany(Participation::class);

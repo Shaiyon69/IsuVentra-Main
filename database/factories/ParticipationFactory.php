@@ -16,13 +16,11 @@ class ParticipationFactory extends Factory
         $student = Student::inRandomOrder()->first() ?? Student::factory()->create();
         $event = Event::inRandomOrder()->first() ?? Event::factory()->create();
 
-        // Generate time_in within the last 30 days, with some variation
-        $timeIn = $this->faker->dateTimeBetween('-30 days', 'now');
+        // Generate time_in between the event's time_start and time_end to match the event's year
+        $timeIn = $this->faker->dateTimeBetween($event->time_start, $event->time_end);
 
-        // time_out is optional, and if present, after time_in
-        $timeOut = $this->faker->boolean(70) ? // 70% chance of having time_out
-            $this->faker->dateTimeBetween($timeIn, $timeIn->format('Y-m-d H:i:s') . ' +4 hours') :
-            null;
+        // time_out is always set, after time_in, up to event's time_end or a bit after
+        $timeOut = $this->faker->dateTimeBetween($timeIn, (clone $event->time_end)->modify('+1 hour'));
 
         return [
             'student_id' => $student->id,

@@ -16,6 +16,12 @@ class Participation extends Model
         'time_out'
     ];
 
+    // <-- Add this
+    protected $casts = [
+        'time_in' => 'datetime',
+        'time_out' => 'datetime',
+    ];
+
     public function student()
     {
         return $this->belongsTo(Student::class);

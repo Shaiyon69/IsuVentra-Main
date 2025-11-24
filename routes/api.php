@@ -52,7 +52,6 @@ Route::name('api.')->group(function () {
     Route::controller(ParticipationController::class)->group(function () {
         Route::get('participation', 'index');
         Route::get('participation/{id}', 'show');
-        Route::get('participation/stats', 'getParticipationStats')->middleware([AdminCheck::class]);
     });
 });
 

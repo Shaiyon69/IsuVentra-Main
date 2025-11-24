@@ -53,4 +53,27 @@ class EventFactory extends Factory
             ];
         });
     }
+
+    /**
+     * State to generate event with a specific year and custom title.
+     *
+     * @param int $year The target year for event.
+     * @param string $title The custom title for the event.
+     *
+     * @param int $year The target year for event.
+     * @param string $title The custom title for the event.
+     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     */
+    public function withYearAndTitle(int $year, string $title)
+    {
+        return $this->state(function (array $attributes) use ($year, $title) {
+            $start = $this->faker->dateTimeBetween("first day of January $year", "last day of December $year");
+
+            return [
+                'title' => $title . ' ' . $year,
+                'time_start' => $start,
+                'time_end' => (clone $start)->modify('+2 hours'),
+            ];
+        });
+    }
 }

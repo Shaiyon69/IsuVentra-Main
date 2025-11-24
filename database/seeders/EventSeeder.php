@@ -9,15 +9,13 @@ class EventSeeder extends Seeder
 {
     public function run()
     {
-        $currentYear = date('Y');
-        $yearsBack = 5;
-        $eventsPerYear = 2;
-
-        for ($year = $currentYear; $year >= $currentYear - $yearsBack; $year--) {
-            Event::factory()
-                ->count($eventsPerYear)
-                ->withYear($year)
-                ->create();
+        // Generate 5 event types, each with events from 2020 to 2025
+        for ($eventType = 1; $eventType <= 5; $eventType++) {
+            for ($year = 2020; $year <= 2025; $year++) {
+                Event::factory()
+                    ->withYearAndTitle($year, "Event $eventType")
+                    ->create();
+            }
         }
     }
 }
