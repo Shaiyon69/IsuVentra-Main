@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import '../app_providers_wrapper.dart';
+// import '../app_providers_wrapper.dart';
+import '../screens/home_screen.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -31,7 +32,7 @@ class _LoginState extends State<Login> {
         if (!mounted) return;
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const AppProvidersWrapper()),
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
       }
     });
@@ -50,7 +51,7 @@ class _LoginState extends State<Login> {
     if (success) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const AppProvidersWrapper()),
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
