@@ -2,12 +2,15 @@ import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import api from "@/services/api";
 
-// Pages
-import LoginPage from "@/views/LoginPage.vue";
-import RegisterPage from "@/views/RegisterPage.vue";
-import UserDashboard from "@/views/UserDashboard.vue";
-import JoinPage from "@/views/JoinPage.vue";
-import AdminDashboard from "@/views/admin/AdminDashboard.vue";
+// 1. Pages (Using Lazy Loading for better performance)
+const LoginPage = () => import("@/views/LoginPage.vue");
+const RegisterPage = () => import("@/views/RegisterPage.vue");
+const UserDashboard = () => import("@/views/UserDashboard.vue");
+const JoinPage = () => import("@/views/JoinPage.vue");
+
+// 2. Updated Path for AdminPanel
+// (Assuming you moved the parent file to src/views/AdminPanel.vue)
+const AdminDashboard = () => import("@/views/admin/AdminPanel.vue");
 
 const routes = [
   { path: "/", name: "login", component: LoginPage },
@@ -26,10 +29,16 @@ const routes = [
   },
   {
     path: "/admin",
-    name: "admin",
     component: AdminDashboard,
     meta: { requiresAuth: true, role: "admin" },
+    children: [
+      { path: "", name: "admin-overview", component: () => import("@/components/admin/OverviewTab.vue") },
+      { path: "students", name: "admin-students", component: () => import("@/components/admin/StudentsTab.vue") },
+      { path: "events", name: "admin-events", component: () => import("@/components/admin/EventsTab.vue") },
+      { path: "participation", name: "admin-participation", component: () => import("@/components/admin/ParticipationTab.vue") },
+    ]
   },
+  { path: "/:pathMatch(.*)*", redirect: "/" }
 ];
 
 const router = createRouter({
@@ -41,34 +50,40 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const auth = useAuthStore();
 
-  // Always allow login/register if not authenticated
-  if (!auth.token && ["login", "register"].includes(to.name)) {
+  // 1. Prevent infinite loops if token is invalid
+  // If user is going to login/register, let them pass unless they are already logged in
+  if (["login", "register"].includes(to.name)) {
+    if (auth.token) {
+      return auth.isAdmin
+        ? next({ name: "admin" })
+        : next({ name: "dashboard" });
+    }
     return next();
   }
 
-  // Prevent logged-in users from accessing login/register
-  if (auth.token && ["login", "register"].includes(to.name)) {
-    return auth.isAdmin ? next({ name: "admin", replace: true }) : next({ name: "dashboard", replace: true });
-  }
-
-  // Routes that require authentication
+  // 2. Check for Protected Routes
   if (to.meta.requiresAuth) {
-    if (!auth.token) return next({ name: "login", replace: true });
+    // A. No Token? Kick them out immediately.
+    if (!auth.token) return next({ name: "login" });
 
-    try {
-      // Check token validity via API and update user data
-      const response = await api.get("/validate-token"); // throws 401 if invalid
-      if (response.data.user) {
+    // B. Performance Fix: Only validate with API if we don't have user details (e.g., Page Refresh)
+    // If we already have auth.user.id, we assume the session is valid to save time.
+    if (!auth.user?.id) {
+      try {
+        const response = await api.get("/validate-token");
         auth.setAuth(response.data.user, auth.token);
+      } catch (err) {
+        auth.logout();
+        return next({ name: "login" });
       }
-    } catch (err) {
-      auth.logout(); // clear token & user data
-      return next({ name: "login", replace: true });
     }
 
-    // Role-based protection
+    // C. Role Check
     if (to.meta.role && to.meta.role !== auth.role) {
-      return auth.isAdmin ? next({ name: "admin", replace: true }) : next({ name: "dashboard", replace: true });
+      // If a user tries to access admin, or admin tries to access user page
+      return auth.isAdmin
+        ? next({ name: "admin" })
+        : next({ name: "dashboard" });
     }
   }
 
