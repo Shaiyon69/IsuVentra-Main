@@ -24,10 +24,15 @@ const error = ref(null);
 const router = useRouter();
 const auth = useAuthStore();
 
+
+
 async function doLogin() {
   error.value = null;
   try {
-    await auth.login(email.value, password.value);
+    await auth.login({ 
+      email: email.value, 
+      password: password.value 
+    });
 
     if (auth.isAdmin) router.push('/admin');
     else router.push('/dashboard');

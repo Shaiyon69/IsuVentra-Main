@@ -2,7 +2,21 @@
   <div class="panel-card">
     <div class="header-action">
       <h3>All Events</h3>
-      <button class="btn-primary" @click="showModal = true">+ Add Event</button>
+      <div class="action-buttons">
+        <input 
+          type="file" 
+          ref="fileInput" 
+          accept=".csv" 
+          style="display: none" 
+          @change="handleFileUpload" 
+        />
+
+        <button class="btn-secondary" @click="triggerFileInput">
+          📂 Import CSV
+        </button>
+
+        <button class="btn-primary" @click="showModal = true">+ Add Event</button>
+      </div>
     </div>
 
     <table class="data-table full-width">
@@ -73,12 +87,14 @@
 import { ref, reactive } from 'vue';
 import api from '@/services/api';
 import BaseModal from '@/components/common/BaseModal.vue';
+import Papa from 'papaparse'; // Import PapaParse
 
 defineProps(['events']);
 const emit = defineEmits(['refresh']);
 
 const showModal = ref(false);
 const isSubmitting = ref(false);
+const fileInput = ref(null); // Reference to hidden input
 
 const form = reactive({
   title: '',
@@ -88,7 +104,6 @@ const form = reactive({
   description: ''
 });
 
-// Helper to format datetime-local string to Laravel format (Y-m-d H:i:s)
 const formatToBackend = (val) => val.replace('T', ' ') + ':00';
 
 async function submitEvent() {
@@ -101,8 +116,6 @@ async function submitEvent() {
     };
 
     await api.post('/events', payload);
-    
-    // Reset & Close
     Object.assign(form, { title: '', time_start: '', time_end: '', location: '', description: '' });
     showModal.value = false;
     emit('refresh');
@@ -114,13 +127,53 @@ async function submitEvent() {
     isSubmitting.value = false;
   }
 }
+
+// --- CSV IMPORT LOGIC ---
+const triggerFileInput = () => {
+  fileInput.value.click();
+};
+
+const handleFileUpload = (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    complete: async (results) => {
+      // Basic validation for event CSV structure
+      const firstRow = results.data[0];
+      if (!firstRow.title || !firstRow.time_start) {
+        alert("Invalid CSV. Required headers: title, time_start, time_end, location");
+        return;
+      }
+
+      if (confirm(`Ready to import ${results.data.length} events?`)) {
+        try {
+          await api.post('/events/import', { data: results.data });
+          alert('Import Successful!');
+          emit('refresh');
+        } catch (error) {
+          console.error(error);
+          alert('Import failed. Check date formats (YYYY-MM-DD HH:mm:ss) and try again.');
+        } finally {
+          event.target.value = '';
+        }
+      } else {
+        event.target.value = '';
+      }
+    }
+  });
+};
 </script>
 
 <style scoped>
-/* Same CSS as StudentsTab + textarea specific */
 .panel-card { background: white; padding: 24px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 .header-action { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .header-action h3 { margin: 0; color: #2c3e50; }
+
+/* Wrapper for buttons */
+.action-buttons { display: flex; gap: 10px; }
 
 .data-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
 .data-table th { text-align: left; padding: 12px; background: #f8f9fa; color: #7f8c8d; font-weight: 600; border-bottom: 2px solid #eaeaea; }

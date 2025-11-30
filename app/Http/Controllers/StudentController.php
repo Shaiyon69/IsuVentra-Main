@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Student;
+use Illuminate\Support\Facades\DB;
 
 class StudentController extends Controller
 {
@@ -82,4 +83,30 @@ class StudentController extends Controller
         $student->delete();
         return response()->json(['message' => 'Student deleted successfully'], 200);
     }
+    public function import(Request $request)
+{
+    $request->validate([
+        'data' => 'required|array',
+        'data.*.student_id' => 'required|distinct|unique:students,student_id', // Check uniqueness
+        'data.*.name' => 'required',
+        'data.*.course' => 'required',
+        'data.*.year_lvl' => 'required|integer',
+        'data.*.campus' => 'required',
+    ]);
+
+    DB::transaction(function () use ($request) {
+        foreach ($request->data as $row) {
+            \App\Models\Student::create([
+                'student_id' => $row['student_id'],
+                'name' => $row['name'],
+                'course' => $row['course'],
+                'year_lvl' => $row['year_lvl'],
+                'campus' => $row['campus'],
+                // user_id is automatically null based on our previous fix
+            ]);
+        }
+    });
+
+    return response()->json(['message' => 'Students imported successfully!']);
+}
 }

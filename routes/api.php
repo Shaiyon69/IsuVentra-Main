@@ -58,7 +58,7 @@ Route::name('api.')->group(function () {
 // Authorized-only (Protected APIs)
 Route::middleware('auth:sanctum')->group(function () {
 
-    //Students can only attend (POST) participations
+    //Students can only attend participations
     Route::controller(ParticipationController::class)->group(function () {
         Route::post('participations', 'store');
         Route::delete('participations/{id}', 'destroy')->middleware([AdminCheck::class]);
@@ -72,12 +72,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::controller(EventController::class)->group(function () {
         Route::post('events', 'store');
+        Route::post('/events/import', 'import');
         Route::put('events/{id}', 'update');
         Route::delete('events/{id}', 'destroy');
     })->middleware([AdminCheck::class]);
 
     Route::controller(StudentController::class)->group(function () {
         Route::post('students', 'store');
+        Route::post('/students/import', 'import');
         Route::put('students/{id}', 'update');
         Route::delete('students/{id}', 'destroy');
     })->middleware([AdminCheck::class]);

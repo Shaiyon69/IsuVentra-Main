@@ -7,18 +7,21 @@
       </div>
 
       <nav class="sidebar-nav">
-        <button :class="{ active: currentPage === 'overview' }" @click="currentPage = 'overview'">
+        <router-link :to="{ name: 'admin-overview' }" active-class="active" class="nav-item">
           <span class="icon">📊</span> <span class="label">Overview</span>
-        </button>
-        <button :class="{ active: currentPage === 'students' }" @click="currentPage = 'students'">
+        </router-link>
+
+        <router-link :to="{ name: 'admin-students' }" active-class="active" class="nav-item">
           <span class="icon">👥</span> <span class="label">Students</span>
-        </button>
-        <button :class="{ active: currentPage === 'events' }" @click="currentPage = 'events'">
+        </router-link>
+
+        <router-link :to="{ name: 'admin-events' }" active-class="active" class="nav-item">
           <span class="icon">📅</span> <span class="label">Events</span>
-        </button>
-        <button :class="{ active: currentPage === 'participation' }" @click="currentPage = 'participation'">
+        </router-link>
+
+        <router-link :to="{ name: 'admin-participation' }" active-class="active" class="nav-item">
           <span class="icon">📋</span> <span class="label">Participation</span>
-        </button>
+        </router-link>
       </nav>
 
       <div class="sidebar-footer">
@@ -26,7 +29,7 @@
           <div class="avatar">A</div>
           <div class="details">
             <span class="name">Administrator</span>
-            <span class="role">ISU Campus</span>
+            <button @click="handleLogout" class="role logout-btn">Logout</button>
           </div>
         </div>
       </div>
@@ -44,29 +47,12 @@
       </div>
 
       <div v-else class="content-scroll-area">
-        <OverviewTab 
-          v-if="currentPage === 'overview'" 
+        <router-view 
           :students="students" 
           :events="events" 
-          :participation="participation" 
-        />
-
-        <StudentsTab 
-          v-if="currentPage === 'students'" 
-          :students="students" 
-          @refresh="loadAdminData" 
-        />
-
-        <EventsTab 
-          v-if="currentPage === 'events'" 
-          :events="events" 
+          :participation="participation"
           @refresh="loadAdminData"
-        />
-
-        <ParticipationTab 
-          v-if="currentPage === 'participation'" 
-          :participation="participation" 
-        />
+        ></router-view>
       </div>
     </main>
   </div>
@@ -74,26 +60,29 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { useAuthStore } from "@/stores/auth";
 import api from "@/services/api";
 
-// Import your sub-components
-import OverviewTab from "@/components/admin/OverviewTab.vue";
-import StudentsTab from "@/components/admin/StudentsTab.vue";
-import EventsTab from "@/components/admin/EventsTab.vue";
-import ParticipationTab from "@/components/admin/ParticipationTab.vue";
+const route = useRoute();
+const router = useRouter();
+const auth = useAuthStore();
 
-const currentPage = ref("overview");
-const isLoading = ref(true); // Default to true so we don't show empty charts
+const isLoading = ref(true);
 const students = ref([]);
 const events = ref([]);
 const participation = ref([]);
 
+// Compute title based on the current Route Name (e.g. 'admin-students' -> 'Students')
 const pageTitle = computed(() => {
-  return currentPage.value.charAt(0).toUpperCase() + currentPage.value.slice(1);
+  const name = route.name ? route.name.toString().replace('admin-', '') : 'overview';
+  return name.charAt(0).toUpperCase() + name.slice(1);
 });
 
 async function loadAdminData() {
-  isLoading.value = true; // Start Loading
+  // Only turn on loading if we don't have data yet (prevents flickering on refresh)
+  if(students.value.length === 0) isLoading.value = true;
+  
   try {
     const [stuRes, eveRes, partRes] = await Promise.all([
       api.get("/students"), 
@@ -106,8 +95,13 @@ async function loadAdminData() {
   } catch (err) { 
     console.error("Failed to load admin data:", err); 
   } finally {
-    isLoading.value = false; // Stop Loading (Render the tabs now)
+    isLoading.value = false;
   }
+}
+
+function handleLogout() {
+  auth.logout();
+  router.push("/");
 }
 
 onMounted(loadAdminData);
@@ -138,8 +132,20 @@ html, body {
 .version { font-size: 0.75rem; opacity: 0.7; text-transform: uppercase; }
 
 .sidebar-nav { display: flex; flex-direction: column; padding: 20px 10px; gap: 8px; flex: 1; }
-.sidebar-nav button { display: flex; align-items: center; gap: 12px; padding: 14px 16px; width: 100%; border: none; background: transparent; color: #a9dfbf; cursor: pointer; border-radius: 8px; transition: all 0.2s; font-size: 0.95rem; text-align: left; }
-.sidebar-nav button:hover, .sidebar-nav button.active { background: #27ae60; color: white; transform: translateX(5px); }
+
+/* UPDATED: Styles now target .nav-item (which is a router-link/anchor tag) */
+.nav-item { 
+  display: flex; align-items: center; gap: 12px; padding: 14px 16px; 
+  width: 100%; border: none; background: transparent; 
+  color: #a9dfbf; cursor: pointer; border-radius: 8px; 
+  transition: all 0.2s; font-size: 0.95rem; text-align: left; 
+  text-decoration: none; /* Remove underline from links */
+}
+
+/* Router automatically adds .active class to the current link */
+.nav-item:hover, .nav-item.active { 
+  background: #27ae60; color: white; transform: translateX(5px); 
+}
 
 .sidebar-footer { padding: 20px; border-top: 1px solid rgba(255,255,255,0.1); }
 .user-info { display: flex; align-items: center; gap: 10px; }
@@ -147,6 +153,8 @@ html, body {
 .details { display: flex; flex-direction: column; }
 .name { font-size: 0.9rem; font-weight: 600; }
 .role { font-size: 0.75rem; opacity: 0.8; }
+.logout-btn { background: none; border: none; color: #fab1a0; cursor: pointer; padding: 0; text-align: left; font-size: 0.75rem; margin-top: 2px;}
+.logout-btn:hover { text-decoration: underline; }
 
 /* MAIN CONTENT AREA */
 .main-content { flex: 1; display: flex; flex-direction: column; background: #f4f6f8; height: 100%; }

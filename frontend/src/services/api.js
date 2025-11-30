@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: 'http://127.0.0.1:8000/api', //backend base URL
+    baseURL: 'http://127.0.0.1:8000/api', // backend base URL
     headers: {
         'Accept': 'application/json',
     },
@@ -11,17 +11,22 @@ const api = axios.create({
 api.interceptors.request.use((req) => {
     const token = localStorage.getItem('token');
     if (token) {
-        req.headers.Authorization = `Bearer ${token}`
+        req.headers.Authorization = `Bearer ${token}`;
     }
     return req;
 });
 
-// handle token expiration
+// handle token expiration 
 api.interceptors.response.use(
     (response) => response,
     (error) => {
+        // If the server returns 401 Unauthorized (Token expired or invalid)
         if (error.response && error.response.status === 401) {
+
+            // 1. Nuke the credentials from storage
             localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/';
         }
         return Promise.reject(error);
     }

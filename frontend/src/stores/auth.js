@@ -1,52 +1,50 @@
-// src/stores/auth.js
 import { defineStore } from 'pinia';
-import api from "@/services/api";
+import api from '@/services/api';
 
 export const useAuthStore = defineStore('auth', {
-    state: () => {
-        const token = localStorage.getItem('token') || null;
-        const user = JSON.parse(localStorage.getItem('user') || 'null');
-        let role = null;
-        if (user) {
-            role = (user.is_admin === 1 || user.is_admin === true) ? 'admin' : 'user';
-        }
-        return {
-            token,
-            user,
-            role,
-        };
-    },
+    state: () => ({
+        token: localStorage.getItem('token') || '',
+        user: JSON.parse(localStorage.getItem('user_data')) || null,
+    }),
+
     getters: {
-        isLoggedIn: (state) => !!state.token,
-        isAdmin: (state) => state.role === 'admin',
-        isUser: (state) => state.role === 'user',
+        isAuthenticated: (state) => !!state.token,
+        isAdmin: (state) => !!state.user?.is_admin,
+        role: (state) => state.user?.is_admin ? 'admin' : 'user',
     },
+
     actions: {
         setAuth(user, token) {
-            this.user = user;
             this.token = token;
-
-            // Set role based on user info
-            this.role = (user?.is_admin === 1 || user?.is_admin === true) ? 'admin' : 'user';
-
-            localStorage.setItem('user', JSON.stringify(user));
+            this.user = user;
             localStorage.setItem('token', token);
+            localStorage.setItem('user_data', JSON.stringify(user));
         },
-        async login(email, password) {
-            const res = await api.post('/login', { email, password });
-            const token = res.data.access_token ?? res.data.token ?? null;
-            const user = res.data.user ?? res.data;
 
-            if (!token) throw new Error('No token returned from login');
-            this.setAuth(user, token);
-            return { user, token };
-        },
         logout() {
+            this.token = '';
             this.user = null;
-            this.token = null;
-            this.role = null;
-            localStorage.removeItem('user');
             localStorage.removeItem('token');
+            localStorage.removeItem('user_data');
+
+            // Optional: Call API to revoke token on server too
+            api.post('/logout').catch(() => { });
+        },
+
+        async login(credentials) {
+            try {
+                const response = await api.post('/login', credentials);
+
+                // --- FIX IS HERE ---
+                // Backend sends: 'access_token'
+                // Frontend was looking for: 'token'
+                this.setAuth(response.data.user, response.data.access_token);
+
+                return true;
+            } catch (error) {
+                console.error("Login failed:", error);
+                throw error;
+            }
         }
     }
 });
