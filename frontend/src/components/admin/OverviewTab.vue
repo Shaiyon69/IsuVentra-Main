@@ -37,7 +37,7 @@
       <div v-for="(eventData, baseName) in forecast.events" :key="baseName" class="forecast-accordion">
         <div class="accordion-header" :class="{ 'open': eventData.isOpen }" @click="toggleForecast(baseName)">
           <div class="header-content">
-            <span class="event-name">{{ baseName }}:</span>
+            <span class="event-name">{{ baseName }}</span>
             <span v-if="eventData.analysis" class="trend-tag" :class="eventData.analysis.type">
               {{ eventData.analysis.label }}
             </span>
@@ -171,39 +171,79 @@ function generatePrescriptiveAnalysis(actualData, forecastData) {
 }
 
 function processForecastData(participations, events) {
+  // 1. Create a map of Event ID -> Base Name (e.g., "Tech Fest 2023" -> "Tech Fest")
   const eventMap = {};
-  events.forEach(e => { eventMap[e.id] = { title: e.title, baseName: getBaseEventName(e.title) }; });
   const grouped = {};
+
+  // Initialize EVERY event from the events list, not just those with participation
+  events.forEach(e => { 
+    const base = getBaseEventName(e.title);
+    eventMap[e.id] = base; 
+    
+    // Ensure the group exists even if empty
+    if (!grouped[base]) {
+      grouped[base] = {}; 
+    }
+  });
+
+  // 2. Populate with Participation Data
   participations.forEach(p => {
     if (!p.time_in || !p.event_id) return;
-    const ev = eventMap[p.event_id]; if (!ev) return;
-    const base = ev.baseName;
+    
+    // Use the map we built above
+    const base = eventMap[p.event_id]; 
+    if (!base) return;
+
     const year = new Date(p.time_in).getFullYear().toString();
-    if (!grouped[base]) grouped[base] = {};
+    
     if (!grouped[base][year]) grouped[base][year] = 0;
     grouped[base][year]++;
   });
 
+  // 3. Generate Analysis / Forecasts
   const eventsForecast = {};
+  
   for (const base in grouped) {
     const yearly = grouped[base];
-    const years = Object.keys(yearly).sort();
-    const actual = years.map(y=>yearly[y]);
+    const years = Object.keys(yearly).sort(); // e.g. ["2023", "2024"]
+    const actual = years.map(y => yearly[y]);
+
+    // CHECK: If we have less than 2 years of data (e.g., a brand new event)
     if (actual.length < 2) {
-      eventsForecast[base] = { message: 'Insufficient data.', isOpen: false };
+      eventsForecast[base] = { 
+        // Logic: If 0 years, say "No data". If 1 year, say "Needs more history".
+        message: actual.length === 0 
+          ? 'No participation data recorded yet.' 
+          : 'Insufficient historical data for prediction (Needs at least 2 years).', 
+        isOpen: false 
+      };
       continue;
     }
+
+    // ... Standard Math (Moving Avg / Exp Smoothing) ...
     const ma = calculateMovingAverage(actual, 3);
     const es = calculateExponentialSmoothing(actual, 0.4);
-    const forecastYears = [+(years[years.length-1])+1, +(years[years.length-1])+2, +(years[years.length-1])+3].map(String);
+    
+    // Guess next 3 years
+    const lastYearInt = parseInt(years[years.length - 1]);
+    const forecastYears = [lastYearInt + 1, lastYearInt + 2, lastYearInt + 3].map(String);
+    
     const forecastEs = generateForecasts(es, 3);
-    const forecastMa = generateForecasts(ma.filter(v=>v!==null), 3);
+    const forecastMa = generateForecasts(ma.filter(v => v !== null), 3);
+
     eventsForecast[base] = {
-      years, actual, moving_average: ma, exponential_smoothing: es,
-      forecast_years: forecastYears, forecast_exponential: forecastEs, forecast_moving_average: forecastMa,
-      isOpen: false, analysis: generatePrescriptiveAnalysis(actual, forecastEs)
+      years, 
+      actual, 
+      moving_average: ma, 
+      exponential_smoothing: es,
+      forecast_years: forecastYears, 
+      forecast_exponential: forecastEs, 
+      forecast_moving_average: forecastMa,
+      isOpen: false, 
+      analysis: generatePrescriptiveAnalysis(actual, forecastEs)
     };
   }
+  
   return { events: eventsForecast };
 }
 

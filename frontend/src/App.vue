@@ -34,7 +34,6 @@ const logout = () => {
 };
 
 onMounted(async () => {
-  // We already defined 'auth' above, no need to define it again inside onMounted
   if (auth.token) {
     try {
       const response = await api.get('/validate-token');
@@ -43,7 +42,7 @@ onMounted(async () => {
         auth.setAuth(response.data.user, auth.token);
       }
     } catch (e) {
-      // If token is invalid (401), clear it
+
       auth.logout();
       if (router.currentRoute.value.meta.requiresAuth) {
         router.push({ name: "login" });
@@ -54,7 +53,6 @@ onMounted(async () => {
 </script>
 
 <style>
-/* ... Your existing styles (unchanged) ... */
 :root {
   --primary-bg: #ffffff;
   --secondary-bg: #f5f5f5;
