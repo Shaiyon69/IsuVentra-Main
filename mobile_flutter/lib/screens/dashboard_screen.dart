@@ -1,22 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/dashboard_provider.dart';
 
-class DashboardScreen extends StatelessWidget {
+// Dashboard Screen All placeholder data to be replaced with dynamic data (prented its real)
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
-  // Placeholdeer for now, dashboard screen with basic layout
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<DashboardProvider>().loadDashboardData();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // const Text(
-            //   'Welcome to the Dashboard!',
-            //   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            // ),
-            // const SizedBox(height: 20),
             Card(
               elevation: 4,
               child: Padding(
@@ -25,52 +35,46 @@ class DashboardScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Quick Stats',
+                      'My Dashboard',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 16),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _buildStatCard('Events', '5', Icons.event),
-                        _buildStatCard('Participations', '12', Icons.people),
-                        _buildStatCard('Scans', '8', Icons.qr_code),
+                        _buildStatCard(
+                          'My Events',
+                          '5', // Placeholder
+                          Icons.event_available,
+                        ),
+                        _buildStatCard(
+                          'Attended',
+                          '3', // Placeholder
+                          Icons.check_circle,
+                        ),
+                        _buildStatCard(
+                          'Upcoming',
+                          '2', // Placeholder
+                          Icons.schedule,
+                        ),
                       ],
                     ),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             const Text(
-              'Recent Activity',
+              'Upcoming Events',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
-            const SizedBox(height: 10),
-            Expanded(
-              child: ListView(
-                children: const [
-                  ListTile(
-                    leading: Icon(Icons.event),
-                    title: Text('Attended Event: Tech Conference'),
-                    subtitle: Text('2 hours ago'),
-                  ),
-                  ListTile(
-                    leading: Icon(Icons.qr_code_scanner),
-                    title: Text('Scanned QR Code'),
-                    subtitle: Text('5 hours ago'),
-                  ),
-                  ListTile(
-                    leading: Icon(Icons.person),
-                    title: Text('Profile Updated'),
-                    subtitle: Text('1 day ago'),
-                  ),
-                ],
-              ),
-            ),
+            const SizedBox(height: 12),
+            _buildUpcomingEvents(),
+
+            const SizedBox(height: 24),
           ],
         ),
       ),
@@ -88,6 +92,44 @@ class DashboardScreen extends StatelessWidget {
         ),
         Text(title, style: const TextStyle(fontSize: 14, color: Colors.grey)),
       ],
+    );
+  }
+
+  // Placeholder of upcoming events (pretend data)
+  Widget _buildUpcomingEvents() {
+    final placeholderEvents = [
+      {
+        'title': 'Tech Conference 2024',
+        'date': 'Dec 15, 2024',
+        'time': '10:00 AM - 4:00 PM',
+        'location': 'Main Auditorium',
+      },
+      {
+        'title': 'Career Fair',
+        'date': 'Dec 20, 2024',
+        'time': '9:00 AM - 3:00 PM',
+        'location': 'Student Center',
+      },
+    ];
+
+    return Column(
+      children: placeholderEvents.map((event) {
+        return Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ListTile(
+            leading: const Icon(Icons.event, color: Colors.blue),
+            title: Text(event['title']!),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${event['date']} • ${event['time']}'),
+                Text('Location: ${event['location']}'),
+              ],
+            ),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+          ),
+        );
+      }).toList(),
     );
   }
 }
