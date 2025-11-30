@@ -1,11 +1,15 @@
 <template>
   <div id="app">
-    <nav v-if="auth.isLoggedIn">
+    <nav v-if="auth.isAuthenticated">
+      
       <router-link to="/dashboard" v-if="auth.role === 'user'">Dashboard</router-link>
       <router-link to="/join" v-if="auth.role === 'user'">Join Event</router-link>
+      
       <router-link to="/admin" v-if="auth.role === 'admin'">Admin Dashboard</router-link>
+      
       <button @click="logout">Logout</button>
     </nav>
+
     <nav v-else>
       <router-link to="/">Login</router-link>
       <router-link to="/register">Register</router-link>
@@ -30,24 +34,27 @@ const logout = () => {
 };
 
 onMounted(async () => {
-  const auth = useAuthStore();
+  // We already defined 'auth' above, no need to define it again inside onMounted
   if (auth.token) {
     try {
       const response = await api.get('/validate-token');
-      // Update user data from server if needed
       if (response.data.user) {
+        // Match the response structure from your backend
         auth.setAuth(response.data.user, auth.token);
       }
-    } catch {
+    } catch (e) {
+      // If token is invalid (401), clear it
       auth.logout();
+      if (router.currentRoute.value.meta.requiresAuth) {
+        router.push({ name: "login" });
+      }
     }
   }
 });
 </script>
 
-
-
 <style>
+/* ... Your existing styles (unchanged) ... */
 :root {
   --primary-bg: #ffffff;
   --secondary-bg: #f5f5f5;
@@ -89,7 +96,6 @@ nav a {
   padding: 0 10px;
 }
 
-/* separator using pseudo-element */
 nav a + a::before {
   content: "|";
   position: absolute;
@@ -97,7 +103,6 @@ nav a + a::before {
   color: var(--outline-accent);
 }
 
-/* active route highlight */
 nav a.router-link-exact-active {
   color: var(--accent);
 }
