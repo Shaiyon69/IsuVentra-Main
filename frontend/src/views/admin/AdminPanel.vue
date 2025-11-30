@@ -54,11 +54,13 @@
         <StudentsTab 
           v-if="currentPage === 'students'" 
           :students="students" 
+          @refresh="loadAdminData" 
         />
 
         <EventsTab 
           v-if="currentPage === 'events'" 
           :events="events" 
+          @refresh="loadAdminData"
         />
 
         <ParticipationTab 

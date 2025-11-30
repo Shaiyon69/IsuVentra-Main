@@ -29,6 +29,16 @@ class ParticipationController extends Controller
 
         return response()->json($participations);
     }
+    public function store(Request $request) {
+        $validated = $request->validate([
+            'student_id' => 'required|exists:students,id',
+            'event_id' => 'required|exists:events,id',
+            'time_in' => 'required|date',
+            'time_out' => 'nullable|date|after:time_in'
+        ]);
+        $participation = Participation::create($validated);
+        return response()->json($participation, 201);
+    }
 
     public function show(string $id)
     {
