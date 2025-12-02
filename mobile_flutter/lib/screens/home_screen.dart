@@ -14,15 +14,11 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
-  // Screen List
   final List<Widget> _screens = [
     const DashboardScreen(),
     const EventListScreen(),
     const QRScannerScreen(),
   ];
-
-  // Titles correspond to the screens
-  static const List<String> _titles = ['Dashboard', 'Events', 'Scanner'];
 
   void _onItemTapped(int index) {
     setState(() {
@@ -36,11 +32,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          _titles[_selectedIndex],
-          style: const TextStyle(fontWeight: FontWeight.w600),
+        title: const Text(
+          'ISUVENTRA',
+          style: TextStyle(fontWeight: FontWeight.w600, letterSpacing: 1.2),
         ),
-        centerTitle: false, // Standard M3 alignment
+        centerTitle: false,
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
@@ -71,8 +67,6 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: _onItemTapped,
-        // Optional: Make the nav bar transparent or colored
-        // backgroundColor: colorScheme.surface,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),
@@ -85,9 +79,7 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Events',
           ),
           NavigationDestination(
-            icon: Icon(
-              Icons.qr_code_scanner,
-            ), // No outlined variant for this standard icon
+            icon: Icon(Icons.qr_code_scanner),
             selectedIcon: Icon(Icons.qr_code_2),
             label: 'Scanner',
           ),
