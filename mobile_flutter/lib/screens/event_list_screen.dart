@@ -51,94 +51,134 @@ class _EventListScreenState extends State<EventListScreen> {
     final provider = Provider.of<EventProvider>(context);
     final events = provider.events;
 
+    // Access theme data
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
     if (provider.isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: CircularProgressIndicator(color: colorScheme.primary),
+      );
     }
 
     if (provider.errorMessage != null) {
       return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 48, color: colorScheme.error),
+              const SizedBox(height: 16),
+              Text(
+                provider.errorMessage!,
+                style: textTheme.bodyLarge?.copyWith(color: colorScheme.error),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () => provider.loadEvents(),
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (events.isEmpty) {
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              provider.errorMessage!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-              textAlign: TextAlign.center,
-            ),
+            Icon(Icons.event_busy, size: 64, color: colorScheme.outline),
             const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => provider.loadEvents(),
-              child: const Text('Retry'),
+            Text(
+              'No events available',
+              style: textTheme.titleMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
       );
     }
 
-    if (events.isEmpty) {
-      return const Center(
-        child: Text('No events available', style: TextStyle(fontSize: 16)),
-      );
-    }
-
     return RefreshIndicator(
       onRefresh: () => provider.loadEvents(),
-      child: ListView.builder(
+      color: colorScheme.primary,
+      child: ListView.separated(
         padding: const EdgeInsets.all(16),
         itemCount: events.length,
+        separatorBuilder: (context, index) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
           final event = events[index];
           return Card(
-            margin: const EdgeInsets.only(bottom: 16),
+            elevation: 0, // Flat card style
+            color: colorScheme.surface, // Matches theme background
+            shape: RoundedRectangleBorder(
+              side: BorderSide(color: colorScheme.outlineVariant),
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    event.title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  // Title Row
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          event.title,
+                          style: textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                      ),
+                      // Optional: Add a status chip here if needed in future
+                    ],
                   ),
+
                   const SizedBox(height: 8),
+
+                  // Description
                   if (event.description != null) ...[
                     Text(
                       event.description!,
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                  Row(
-                    children: [
-                      const Icon(Icons.access_time, size: 16),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          _formatEventTime(event.timeStart, event.timeEnd),
-                          style: const TextStyle(fontSize: 12),
-                        ),
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
                       ),
-                    ],
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Meta Data (Time & Location)
+                  _buildMetaRow(
+                    context,
+                    Icons.access_time,
+                    _formatEventTime(event.timeStart, event.timeEnd),
                   ),
                   const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(Icons.location_on, size: 16),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          event.location,
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                      ),
-                    ],
+                  _buildMetaRow(
+                    context,
+                    Icons.location_on_outlined,
+                    event.location,
                   ),
-                  const SizedBox(height: 12),
+
+                  const SizedBox(height: 16),
+
+                  // Action Button
                   SizedBox(
                     width: double.infinity,
-                    child: ElevatedButton(
+                    child: FilledButton.tonal(
+                      // Tonal button is less aggressive than Filled
                       onPressed: () {
                         Navigator.push(
                           context,
@@ -147,7 +187,20 @@ class _EventListScreenState extends State<EventListScreen> {
                           ),
                         );
                       },
-                      child: const Text('Participate'),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.qr_code_scanner, size: 20),
+                          SizedBox(width: 8),
+                          Text('Participate'),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -156,6 +209,27 @@ class _EventListScreenState extends State<EventListScreen> {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildMetaRow(BuildContext context, IconData icon, String text) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: colorScheme.primary),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

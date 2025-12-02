@@ -29,7 +29,7 @@
           <div class="avatar">A</div>
           <div class="details">
             <span class="name">Administrator</span>
-            <button @click="handleLogout" class="role logout-btn">Logout</button>
+            <button @click="handleLogout" class="logout-btn">Logout</button>
           </div>
         </div>
       </div>
@@ -47,9 +47,9 @@
       </div>
 
       <div v-else class="content-scroll-area">
-        <router-view 
-          :students="students" 
-          :events="events" 
+        <router-view
+          :students="students"
+          :events="events"
           :participation="participation"
           @refresh="loadAdminData"
         ></router-view>
@@ -73,27 +73,28 @@ const students = ref([]);
 const events = ref([]);
 const participation = ref([]);
 
-// Compute title based on the current Route Name (e.g. 'admin-students' -> 'Students')
+// Compute title based on the current Route Name
 const pageTitle = computed(() => {
   const name = route.name ? route.name.toString().replace('admin-', '') : 'overview';
   return name.charAt(0).toUpperCase() + name.slice(1);
 });
 
 async function loadAdminData() {
-  // Only turn on loading if we don't have data yet (prevents flickering on refresh)
+  // If we already have data, don't show the full spinner, just refresh silently
+  // unless the array is empty (first load)
   if(students.value.length === 0) isLoading.value = true;
-  
+
   try {
     const [stuRes, eveRes, partRes] = await Promise.all([
-      api.get("/students"), 
-      api.get("/events"), 
+      api.get("/students"),
+      api.get("/events"),
       api.get("/participation")
     ]);
     students.value = stuRes.data;
     events.value = eveRes.data;
     participation.value = partRes.data;
-  } catch (err) { 
-    console.error("Failed to load admin data:", err); 
+  } catch (err) {
+    console.error("Failed to load admin data:", err);
   } finally {
     isLoading.value = false;
   }
@@ -133,18 +134,16 @@ html, body {
 
 .sidebar-nav { display: flex; flex-direction: column; padding: 20px 10px; gap: 8px; flex: 1; }
 
-/* UPDATED: Styles now target .nav-item (which is a router-link/anchor tag) */
-.nav-item { 
-  display: flex; align-items: center; gap: 12px; padding: 14px 16px; 
-  width: 100%; border: none; background: transparent; 
-  color: #a9dfbf; cursor: pointer; border-radius: 8px; 
-  transition: all 0.2s; font-size: 0.95rem; text-align: left; 
-  text-decoration: none; /* Remove underline from links */
+.nav-item {
+  display: flex; align-items: center; gap: 12px; padding: 14px 16px;
+  width: 100%; border: none; background: transparent;
+  color: #a9dfbf; cursor: pointer; border-radius: 8px;
+  transition: all 0.2s; font-size: 0.95rem; text-align: left;
+  text-decoration: none;
 }
 
-/* Router automatically adds .active class to the current link */
-.nav-item:hover, .nav-item.active { 
-  background: #27ae60; color: white; transform: translateX(5px); 
+.nav-item:hover, .nav-item.active {
+  background: #27ae60; color: white; transform: translateX(5px);
 }
 
 .sidebar-footer { padding: 20px; border-top: 1px solid rgba(255,255,255,0.1); }
@@ -152,37 +151,22 @@ html, body {
 .avatar { width: 36px; height: 36px; background: #2ecc71; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #0e3e23; }
 .details { display: flex; flex-direction: column; }
 .name { font-size: 0.9rem; font-weight: 600; }
-.role { font-size: 0.75rem; opacity: 0.8; }
 .logout-btn { background: none; border: none; color: #fab1a0; cursor: pointer; padding: 0; text-align: left; font-size: 0.75rem; margin-top: 2px;}
 .logout-btn:hover { text-decoration: underline; }
 
-/* MAIN CONTENT AREA */
+/* MAIN CONTENT */
 .main-content { flex: 1; display: flex; flex-direction: column; background: #f4f6f8; height: 100%; }
 .top-bar { padding: 20px 32px; background: white; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; }
 .top-bar h1 { margin: 0; font-size: 1.5rem; color: #2c3e50; }
 .date-display { color: #7f8c8d; font-size: 0.9rem; }
 .content-scroll-area { padding: 32px; overflow-y: auto; flex: 1; }
 
-/* LOADING SPINNER STYLES */
+/* SPINNER */
 .loading-container {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  color: #7f8c8d;
+  display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; color: #7f8c8d;
 }
 .spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #e0e0e0;
-  border-top: 4px solid #27ae60;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 16px;
+  width: 40px; height: 40px; border: 4px solid #e0e0e0; border-top: 4px solid #27ae60; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px;
 }
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 </style>
