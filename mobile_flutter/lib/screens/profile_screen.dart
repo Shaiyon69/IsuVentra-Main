@@ -46,21 +46,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // const Text(
-                      //   'Student Profile',
-                      //   style: TextStyle(
-                      //     fontSize: 22,
-                      //     fontWeight: FontWeight.bold,
-                      //   ),
-                      // ),
-                      // IconButton(
-                      //   onPressed: () async {
-                      //     await userProvider.refreshUser();
-                      //   },
-                      //   icon: const Icon(Icons.refresh),
-                      // ),
-                    ],
+                    // children: [
+                    // const Text(
+                    //   'Student Profile',
+                    //   style: TextStyle(
+                    //     fontSize: 22,
+                    //     fontWeight: FontWeight.bold,
+                    //   ),
+                    // ),
+                    // IconButton(
+                    //   onPressed: () async {
+                    //     await userProvider.refreshUser();
+                    //   },
+                    //   icon: const Icon(Icons.refresh),
+                    // ),
+                    // ],
                   ),
                   const SizedBox(height: 8),
                   Center(
