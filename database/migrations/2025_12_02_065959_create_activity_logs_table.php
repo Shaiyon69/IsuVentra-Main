@@ -10,9 +10,9 @@ return new class extends Migration
     {
         Schema::create('audit_logs', function (Blueprint $table) {
             $table->id();
-            $table->string('action');      // e.g., "Created", "Updated"
-            $table->text('activitylog');   // e.g., "Added new Student: John Doe"
-            $table->foreignId('user_id')->nullable()->constrained(); // Who did it?
+            $table->string('action');      
+            $table->text('activitylog');   
+            $table->foreignId('user_id')->nullable()->constrained(); 
             $table->timestamps();
         });
     }

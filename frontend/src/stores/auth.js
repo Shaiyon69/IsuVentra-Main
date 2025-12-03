@@ -34,10 +34,6 @@ export const useAuthStore = defineStore('auth', {
         async login(credentials) {
             try {
                 const response = await api.post('/login', credentials);
-
-                // --- FIX IS HERE ---
-                // Backend sends: 'access_token'
-                // Frontend was looking for: 'token'
                 this.setAuth(response.data.user, response.data.access_token);
 
                 return true;
