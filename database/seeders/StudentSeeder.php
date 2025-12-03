@@ -10,23 +10,9 @@ class StudentSeeder extends Seeder
 {
     public function run()
     {
-        // 1. Create 20 normal users + linked students
-        User::factory()
+        // Just create students. The Observer will create the Users automatically.
+        Student::factory()
             ->count(20)
-            ->create()
-            ->each(function ($user) {
-                Student::factory()->create([
-                    'user_id' => $user->id,
-                    'name' => $user->name,
-                ]);
-            });
-
-        // 2. Optional: create a separate admin user + linked student
-        $adminUser = User::factory()->admin()->create();
-        Student::factory()->create([
-            'user_id' => $adminUser->id,
-            'name' => $adminUser->name,
-            'student_id' => 'ADMIN001',
-        ]);
+            ->create(); 
     }
 }

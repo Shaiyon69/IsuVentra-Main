@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Participation;
+use Illuminate\Support\Facades\DB;
 
 class ParticipationController extends Controller
 {
@@ -29,6 +30,7 @@ class ParticipationController extends Controller
 
         return response()->json($participations);
     }
+
     public function store(Request $request) {
         $validated = $request->validate([
             'student_id' => 'required|exists:students,id',
@@ -36,7 +38,12 @@ class ParticipationController extends Controller
             'time_in' => 'required|date',
             'time_out' => 'nullable|date|after:time_in'
         ]);
-        $participation = Participation::create($validated);
+
+        // Transaction guarantees the record is saved completely or not at all
+        $participation = DB::transaction(function () use ($validated) {
+            return Participation::create($validated);
+        });
+
         return response()->json($participation, 201);
     }
 
@@ -52,7 +59,11 @@ class ParticipationController extends Controller
         if (!$participation) {
             return response()->json(['message' => 'Participation not found'], 404);
         }
-        $participation->delete();
+
+        DB::transaction(function () use ($participation) {
+            $participation->delete();
+        });
+
         return response()->json(['message' => 'Participation deleted successfully'], 200);
     }
 
@@ -62,37 +73,42 @@ class ParticipationController extends Controller
             'event_id' => 'required|exists:events,id',
         ]);
 
-        $user = $request->user();
-        $student = $user->student;
+        return DB::transaction(function () use ($request) {
+            $user = $request->user();
+            $student = $user->student;
 
-        if (!$student) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'No student record linked to this user.'
-            ], 422);
-        }
+            if (!$student) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'No student record linked to this user.'
+                ], 422);
+            }
 
-        $participation = Participation::where('student_id', $student->id)
-            ->where('event_id', $request->event_id)
-            ->first();
+            // check for existing participation
+            // lockForUpdate prevents race conditions if button is double-clicked
+            $participation = Participation::where('student_id', $student->id)
+                ->where('event_id', $request->event_id)
+                ->lockForUpdate()
+                ->first();
 
-        if ($participation) {
-            return response()->json([
-                'status' => 'already_in',
-                'message' => 'You are already participating in this event.'
+            if ($participation) {
+                return response()->json([
+                    'status' => 'already_in',
+                    'message' => 'You are already participating in this event.'
+                ]);
+            }
+
+            Participation::create([
+                'student_id' => $student->id,
+                'event_id' => $request->event_id,
+                'time_in' => now(),
             ]);
-        }
 
-        Participation::create([
-            'student_id' => $student->id,
-            'event_id' => $request->event_id,
-            'time_in' => now(),
-        ]);
-
-        return response()->json([
-            'status' => 'joined',
-            'message' => 'Participation recorded!'
-        ]);
+            return response()->json([
+                'status' => 'joined',
+                'message' => 'Participation recorded!'
+            ]);
+        });
     }
 
     public function timeOut(Request $request)
@@ -101,28 +117,31 @@ class ParticipationController extends Controller
             'event_id' => 'required|exists:events,id',
         ]);
 
-        $user = $request->user();
-        $eventId = $request->event_id;
+        return DB::transaction(function () use ($request) {
+            $user = $request->user();
+            $eventId = $request->event_id;
 
-        $participation = Participation::where('student_id', $user->id)
-            ->where('event_id', $eventId)
-            ->first();
+            $participation = Participation::where('student_id', $user->id)
+                ->where('event_id', $eventId)
+                ->lockForUpdate()
+                ->first();
 
-        if (!$participation) {
+            if (!$participation) {
+                return response()->json([
+                    'status' => 'not_found',
+                    'message' => 'You are not participating in this event.'
+                ], 404);
+            }
+
+            $participation->update([
+                'time_out' => now(),
+            ]);
+
             return response()->json([
-                'status' => 'not_found',
-                'message' => 'You are not participating in this event.'
-            ], 404);
-        }
-
-        $participation->update([
-            'time_out' => now(),
-        ]);
-
-        return response()->json([
-            'status' => 'timed_out',
-            'message' => 'You have timed out of the event.'
-        ]);
+                'status' => 'timed_out',
+                'message' => 'You have timed out of the event.'
+            ]);
+        });
     }
 
     // ====================================
@@ -134,17 +153,13 @@ class ParticipationController extends Controller
         $count = count($data);
         
         for ($i = 0; $i < $count; $i++) {
-            // Need at least 'window' data points to calculate average
             if ($i < $window - 1) {
-                $result[] = null; // not enough data for full window
+                $result[] = null; 
                 continue;
             }
-            
-            // Get the slice of data for this window
             $slice = array_slice($data, $i - $window + 1, $window);
             $result[] = array_sum($slice) / $window;
         }
-        
         return $result;
     }
 
@@ -153,40 +168,29 @@ class ParticipationController extends Controller
         if (empty($data)) {
             return [];
         }
-
         $result = [];
         $result[0] = $data[0];
 
         for ($i = 1; $i < count($data); $i++) {
             $result[$i] = $alpha * $data[$i] + (1 - $alpha) * $result[$i - 1];
         }
-
         return $result;
     }
 
-    /**
-     * Generate forecast values for future periods
-     * Uses trend from smoothed data
-     */
     private function generateForecasts($smoothedData, $horizon = 3)
     {
         if (empty($smoothedData) || count($smoothedData) < 2) {
             return array_fill(0, $horizon, null);
         }
-
-        // Calculate trend from last few smoothed values
         $lastValue = end($smoothedData);
         $secondLastValue = $smoothedData[count($smoothedData) - 2];
         $trend = $lastValue - $secondLastValue;
 
-        // Generate forecasts
         $forecasts = [];
         for ($i = 1; $i <= $horizon; $i++) {
             $forecast = $lastValue + ($trend * $i);
-            // Ensure forecast is not negative
             $forecasts[] = max(0, round($forecast, 2));
         }
-
         return $forecasts;
     }
 
@@ -203,7 +207,6 @@ class ParticipationController extends Controller
             ]);
         }
 
-        // Group by event name, then by year
         $groupedByEvent = [];
         foreach ($participations as $p) {
             if ($p->time_in && $p->event) {
@@ -222,13 +225,11 @@ class ParticipationController extends Controller
 
         $eventsForecast = [];
         foreach ($groupedByEvent as $eventName => $yearlyData) {
-            // Sort years chronologically
             ksort($yearlyData);
 
             $years = array_keys($yearlyData);
             $actualCounts = array_values($yearlyData);
 
-            // Check if we have enough data points for forecasting
             if (count($years) < 2) {
                 $eventsForecast[$eventName] = [
                     'message' => 'Not enough participation data for forecasting this event. At least 2 years of historical data are required.',
@@ -244,14 +245,10 @@ class ParticipationController extends Controller
                 continue;
             }
 
-            // Calculate smoothing methods
             $movingAvg = $this->calculateMovingAverage($actualCounts, 3);
             $expSmooth = $this->calculateExponentialSmoothing($actualCounts, 0.3);
-
-            // Generate forecasts for next 3 years using exponential smoothing
             $forecastsExp = $this->generateForecasts($expSmooth, 3);
-
-            // Generate forecasts for next 3 years using moving average (use non-null values)
+            
             $nonNullMoving = array_values(array_filter($movingAvg, fn($v) => $v !== null));
             $forecastsMoving = $this->generateForecasts($nonNullMoving, 3);
 

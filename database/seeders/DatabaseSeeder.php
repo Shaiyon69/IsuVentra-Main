@@ -10,8 +10,6 @@ use Database\Seeders\StudentSeeder;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
     /**
      * Seed the application's database.
      */

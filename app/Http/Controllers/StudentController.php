@@ -24,13 +24,18 @@ class StudentController extends Controller
     {
         $validated = $request->validate([
             'student_id' => 'required|string|max:20|unique:students,student_id',
-            'name' => 'required|string|max:255',
-            'course' => 'required|string|max:100',
-            'year_lvl' => 'required|integer|min:1|max:10',
-            'campus' => 'required|string|max:100',
+            'lrn'        => 'required|digits:12|unique:students,lrn', // Added LRN validation
+            'name'       => 'required|string|max:255',
+            'course'     => 'required|string|max:100',
+            'year_lvl'   => 'required|integer|min:1|max:10',
+            'campus'     => 'required|string|max:100',
         ]);
 
-        $student = Student::create($validated);
+        $student = DB::transaction(function () use ($validated) {
+            // Since $validated contains 'lrn' now, it will be automatically included here
+            return Student::create($validated);
+        });
+
         return response()->json([
             'message' => 'Student created successfully',
             'student' => $student
@@ -54,17 +59,22 @@ class StudentController extends Controller
     {
         $validated = $request->validate([
             'student_id' => 'sometimes|required|string|max:20|unique:students,student_id,' . $id,
-            'name' => 'sometimes|required|string|max:255',
-            'course' => 'sometimes|required|string|max:100',
-            'year_lvl' => 'sometimes|required|integer|min:1|max:10',
-            'campus' => 'sometimes|required|string|max:100',
+            'lrn'        => 'sometimes|required|digits:12|unique:students,lrn,' . $id, // Added LRN validation (ignoring current ID)
+            'name'       => 'sometimes|required|string|max:255',
+            'course'     => 'sometimes|required|string|max:100',
+            'year_lvl'   => 'sometimes|required|integer|min:1|max:10',
+            'campus'     => 'sometimes|required|string|max:100',
         ]);
 
         $student = Student::find($id);
         if (!$student) {
             return response()->json(['message' => 'Student not found'], 404);
         }
-        $student->update($validated);
+
+        DB::transaction(function () use ($student, $validated) {
+            $student->update($validated);
+        });
+
         return response()->json([
             'message' => 'Student updated successfully',
             'student' => $student
@@ -80,33 +90,40 @@ class StudentController extends Controller
         if (!$student) {
             return response()->json(['message' => 'Student not found'], 404);
         }
-        $student->delete();
+
+        DB::transaction(function () use ($student) {
+            $student->delete();
+        });
+
         return response()->json(['message' => 'Student deleted successfully'], 200);
     }
+
     public function import(Request $request)
-{
-    $request->validate([
-        'data' => 'required|array',
-        'data.*.student_id' => 'required|distinct|unique:students,student_id', // Check uniqueness
-        'data.*.name' => 'required',
-        'data.*.course' => 'required',
-        'data.*.year_lvl' => 'required|integer',
-        'data.*.campus' => 'required',
-    ]);
+    {
+        $request->validate([
+            'data' => 'required|array',
+            'data.*.student_id' => 'required|distinct|unique:students,student_id',
+            'data.*.lrn'        => 'required|digits:12|distinct|unique:students,lrn', // Fixed typo 'data*' -> 'data.*'
+            'data.*.name'       => 'required',
+            'data.*.course'     => 'required',
+            'data.*.year_lvl'   => 'required|integer',
+            'data.*.campus'     => 'required',
+        ]);
 
-    DB::transaction(function () use ($request) {
-        foreach ($request->data as $row) {
-            \App\Models\Student::create([
-                'student_id' => $row['student_id'],
-                'name' => $row['name'],
-                'course' => $row['course'],
-                'year_lvl' => $row['year_lvl'],
-                'campus' => $row['campus'],
-                // user_id is automatically null based on our previous fix
-            ]);
-        }
-    });
+        DB::transaction(function () use ($request) {
+            foreach ($request->data as $row) {
+                Student::create([
+                    'student_id' => $row['student_id'],
+                    'lrn'        => $row['lrn'], // Map LRN from CSV row
+                    'name'       => $row['name'],
+                    'course'     => $row['course'],
+                    'year_lvl'   => $row['year_lvl'],
+                    'campus'     => $row['campus'],
+                    // user_id is automatically handled by the Observer
+                ]);
+            }
+        });
 
-    return response()->json(['message' => 'Students imported successfully!']);
-}
+        return response()->json(['message' => 'Students imported successfully!']);
+    }
 }

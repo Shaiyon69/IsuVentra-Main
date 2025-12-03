@@ -10,6 +10,7 @@ use App\Models\Student;
 use App\Models\Participation;
 use App\Models\User;
 use App\Observers\AuditObserver;
+use App\Observers\StudentAccountObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -37,5 +38,7 @@ class AppServiceProvider extends ServiceProvider
                 'connection' => $query->connectionName,
             ]);
         });
+
+        Student::observe(StudentAccountObserver::class);
     }
 }

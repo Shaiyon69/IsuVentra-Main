@@ -2,8 +2,19 @@
   <div class="auth-page">
     <h2>Login</h2>
     <form @submit.prevent="doLogin">
-      <input v-model="email" type="email" placeholder="Email" required />
-      <input v-model="password" type="password" placeholder="Password" required />
+      <input 
+        v-model="loginIdentifier" 
+        type="text" 
+        placeholder="Email or Student ID" 
+        required 
+      />
+      
+      <input 
+        v-model="password" 
+        type="password" 
+        placeholder="Password" 
+        required 
+      />
       <br/>
       <button type="submit">Login</button>
     </form>
@@ -18,19 +29,20 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 
-const email = ref('');
+// Renamed 'email' to 'loginIdentifier' for clarity
+const loginIdentifier = ref('');
 const password = ref('');
 const error = ref(null);
 const router = useRouter();
 const auth = useAuthStore();
 
-
-
 async function doLogin() {
   error.value = null;
   try {
+    // We send 'loginIdentifier' as 'email' because 
+    // the backend AuthController expects the 'email' key
     await auth.login({ 
-      email: email.value, 
+      email: loginIdentifier.value, 
       password: password.value 
     });
 
@@ -44,6 +56,7 @@ async function doLogin() {
 </script>
 
 <style scoped>
+/* Styles remain exactly the same */
 .auth-page {
   max-width: 400px;
   margin: 40px auto;

@@ -42,7 +42,10 @@ class EventController extends Controller
             'location' => 'required|string|max:255',
         ]);
 
-        $event = Event::create($validated);
+        $event = DB::transaction(function () use ($validated) {
+            return Event::create($validated);
+        });
+
         return response()->json([
             'message' => 'Event created successfully',
             'event' => $event
@@ -76,7 +79,11 @@ class EventController extends Controller
         if (!$event) {
             return response()->json(['message' => 'Event not found'], 404);
         }
-        $event->update($validated);
+
+        DB::transaction(function () use ($event, $validated) {
+            $event->update($validated);
+        });
+
         return response()->json([
             'message' => 'Event updated successfully',
             'event' => $event
@@ -92,32 +99,37 @@ class EventController extends Controller
         if (!$event) {
             return response()->json(['message' => 'Event not found'], 404);
         }
-        $event->delete();
+
+        DB::transaction(function () use ($event) {
+            $event->delete();
+        });
+
         return response()->json(['message' => 'Event deleted successfully'], 200);
     }
 
     public function import(Request $request)
-{
-    $request->validate([
-        'data' => 'required|array',
-        'data.*.title' => 'required',
-        'data.*.time_start' => 'required|date',
-        'data.*.time_end' => 'required|date|after:data.*.time_start',
-        'data.*.location' => 'required',
-    ]);
+    {
+        $request->validate([
+            'data' => 'required|array',
+            'data.*.title' => 'required',
+            'data.*.time_start' => 'required|date',
+            'data.*.time_end' => 'required|date|after:data.*.time_start',
+            'data.*.location' => 'required',
+        ]);
 
-    DB::transaction(function () use ($request) {
-        foreach ($request->data as $row) {
-            \App\Models\Event::create([
-                'title' => $row['title'],
-                'time_start' => date('Y-m-d H:i:s', strtotime($row['time_start'])),
-                'time_end' => date('Y-m-d H:i:s', strtotime($row['time_end'])),
-                'location' => $row['location'],
-                'description' => $row['description'] ?? null,
-            ]);
-        }
-    });
+        // Transaction already implemented here
+        DB::transaction(function () use ($request) {
+            foreach ($request->data as $row) {
+                Event::create([
+                    'title' => $row['title'],
+                    'time_start' => date('Y-m-d H:i:s', strtotime($row['time_start'])),
+                    'time_end' => date('Y-m-d H:i:s', strtotime($row['time_end'])),
+                    'location' => $row['location'],
+                    'description' => $row['description'] ?? null,
+                ]);
+            }
+        });
 
-    return response()->json(['message' => 'Events imported successfully!']);
-}
+        return response()->json(['message' => 'Events imported successfully!']);
+    }
 }

@@ -11,12 +11,13 @@ class StudentFactory extends Factory
     public function definition()
     {
         return [
-            'user_id' => \App\Models\User::factory(), // create a linked user if not provided
+            'user_id' => null, // Let the Observer create the user!
             'student_id' => $this->faker->unique()->numerify('S####'),
+            'lrn' => $this->faker->numerify('############'), // 12 digits
             'name' => $this->faker->name(),
-            'course' => $this->faker->randomElement(['BSCS', 'BSIT', 'BSECE']),
+            'course' => "Test Course",
             'year_lvl' => $this->faker->numberBetween(1, 4),
-            'campus' => $this->faker->randomElement(['Main', 'Satellite']),
+            'campus' => "Test Campus",
         ];
     }
 }

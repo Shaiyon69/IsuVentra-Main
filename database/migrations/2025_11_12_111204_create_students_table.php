@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained()->onDelete('cascade');
             $table->string('student_id')->unique();
+            $table->string('lrn',12)->unique();
             $table->string('name');
             $table->string('course');
             $table->integer('year_lvl');
