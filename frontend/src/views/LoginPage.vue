@@ -1,26 +1,70 @@
 <template>
-  <div class="auth-page">
-    <h2>Login</h2>
-    <form @submit.prevent="doLogin">
-      <input 
-        v-model="loginIdentifier" 
-        type="text" 
-        placeholder="Email or Student ID" 
-        required 
-      />
-      
-      <input 
-        v-model="password" 
-        type="password" 
-        placeholder="Password" 
-        required 
-      />
-      <br/>
-      <button type="submit">Login</button>
-    </form>
+  <div class="login-wrapper">
+    <div class="bg-shape shape-1"></div>
+    <div class="bg-shape shape-2"></div>
 
-    <p v-if="error" class="error">{{ error }}</p>
-    <router-link to="/register">Register</router-link>
+    <div class="login-card fade-in-up">
+      <div class="header-section">
+        <div class="logo-container">
+          <i class="pi pi-box text-5xl text-primary"></i> 
+        </div>
+        <h1>ISUVentra</h1>
+        <p>Event Participation Management System</p>
+      </div>
+
+      <form @submit.prevent="doLogin" class="form-content">
+        <div class="field">
+          <label for="identifier">Email or Student ID</label>
+          <IconField class="w-full">
+            <InputIcon class="pi pi-user" />
+            <InputText 
+              id="identifier" 
+              v-model="loginIdentifier" 
+              type="text" 
+              placeholder="e.g. 20-0001" 
+              class="w-full" 
+              required 
+            />
+          </IconField>
+        </div>
+        
+        <div class="field">
+          <label for="password">Password</label>
+          <Password 
+            id="password" 
+            v-model="password" 
+            :feedback="false" 
+            toggleMask 
+            placeholder="Password" 
+            class="w-full" 
+            inputClass="w-full" 
+            required 
+          />
+          <div class="text-right mt-1">
+            <span class="text-sm text-secondary cursor-pointer hover:text-primary transition-colors">Forgot Password?</span>
+          </div>
+        </div>
+
+        <Button 
+          label="Sign In" 
+          icon="pi pi-sign-in" 
+          type="submit" 
+          class="w-full mt-3 shadow-2" 
+          :loading="loading" 
+        />
+      </form>
+
+      <transition name="fade">
+        <Message v-if="error" severity="error" :closable="false" class="mt-4 w-full shadow-1">
+          {{ error }}
+        </Message>
+      </transition>
+
+      <div class="footer-section">
+        <span class="text-secondary">New to ISUVentra? </span>
+        <router-link to="/register" class="link-primary">Create an account</router-link>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -29,18 +73,25 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 
-// Renamed 'email' to 'loginIdentifier' for clarity
+// --- MANUAL IMPORTS (Fixes "Broken" Components) ---
+import InputText from 'primevue/inputtext';
+import Password from 'primevue/password';
+import Button from 'primevue/button';
+import Message from 'primevue/message';
+import IconField from 'primevue/iconfield';
+import InputIcon from 'primevue/inputicon';
+
 const loginIdentifier = ref('');
 const password = ref('');
 const error = ref(null);
+const loading = ref(false);
 const router = useRouter();
 const auth = useAuthStore();
 
 async function doLogin() {
   error.value = null;
+  loading.value = true;
   try {
-    // We send 'loginIdentifier' as 'email' because 
-    // the backend AuthController expects the 'email' key
     await auth.login({ 
       email: loginIdentifier.value, 
       password: password.value 
@@ -51,79 +102,78 @@ async function doLogin() {
   } catch (e) {
     console.error(e);
     error.value = e.response?.data?.message || e.message || 'Login failed';
+  } finally {
+    loading.value = false;
   }
 }
 </script>
 
 <style scoped>
-/* Styles remain exactly the same */
-.auth-page {
-  max-width: 400px;
-  margin: 40px auto;
-  padding: 40px 32px;
-  background-color: var(--secondary-bg);
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+/* 1. Layout Wrapper */
+.login-wrapper {
+  min-height: 100vh;
+  position: relative;
   display: flex;
-  flex-direction: column;
-  gap: 20px;
-  border: 1px solid var(--border-color);
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--surface-ground, #f8f9fa) 0%, #e0e7ff 100%);
+  overflow: hidden;
+  padding: 20px;
 }
 
-.auth-page h2 {
-  color: var(--text-color);
-  margin-bottom: 20px;
+/* 2. Background Decor */
+.bg-shape {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  z-index: 0;
+  opacity: 0.6;
+}
+.shape-1 { top: -100px; left: -100px; width: 400px; height: 400px; background: rgba(16, 185, 129, 0.3); }
+.shape-2 { bottom: -100px; right: -100px; width: 300px; height: 300px; background: rgba(59, 130, 246, 0.3); }
+
+/* 3. Card Styling */
+.login-card {
+  position: relative;
+  z-index: 10;
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 24px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1); 
+  padding: 3rem;
+  width: 100%;
+  max-width: 420px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(10px);
 }
 
-.auth-page input {
-  padding: 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  background-color: var(--primary-bg);
-  color: var(--text-color);
-  font-size: 16px;
+/* 4. Headers */
+.header-section { text-align: center; margin-bottom: 2.5rem; }
+.header-section h1 { font-size: 1.75rem; font-weight: 800; color: var(--text-color, #1f2937); margin: 0 0 0.5rem 0; }
+.header-section p { color: var(--text-color-secondary, #6b7280); margin: 0; }
+
+.logo-container {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px; height: 64px;
+  background: var(--surface-ground, #f1f5f9);
+  border-radius: 16px;
+  margin-bottom: 1rem;
+  color: var(--primary-color, #10b981);
 }
 
-.auth-page input::placeholder {
-  color: var(--light-accent);
-}
+/* 5. Inputs */
+.form-content { display: flex; flex-direction: column; gap: 1.25rem; }
+.field { display: flex; flex-direction: column; gap: 0.5rem; text-align: left; }
+.field label { font-size: 0.9rem; font-weight: 600; color: var(--text-color, #374151); margin-left: 4px; }
+.w-full { width: 100%; }
 
-.auth-page input:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(102, 187, 106, 0.2);
-}
+/* 6. Footer */
+.footer-section { text-align: center; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--surface-border, #e5e7eb); font-size: 0.9rem; }
+.link-primary { color: var(--primary-color, #10b981); text-decoration: none; font-weight: 700; }
+.link-primary:hover { text-decoration: underline; }
 
-.auth-page button {
-  padding: 12px;
-  background-color: var(--accent);
-  color: var(--primary-bg);
-  border: none;
-  border-radius: 4px;
-  font-size: 16px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.auth-page button:hover {
-  background-color: var(--light-accent);
-}
-
-.error {
-  color: var(--error-color);
-  background-color: rgba(255, 138, 128, 0.1);
-  padding: 8px;
-  border-radius: 4px;
-  border: 1px solid var(--error-color);
-}
-
-.auth-page a {
-  color: var(--accent);
-  text-decoration: none;
-}
-
-.auth-page a:hover {
-  text-decoration: underline;
-}
+/* 7. Animation */
+.fade-in-up { animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 </style>

@@ -1,108 +1,111 @@
 <template>
-  <div class="dashboard-view">
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-icon students-icon">🎓</div>
-        <div class="stat-info">
+  <div class="overview-grid">
+    <div class="stats-row">
+      <div class="stat-card blue">
+        <div class="icon-box"><i class="pi pi-users"></i></div>
+        <div class="stat-content">
           <span class="stat-label">Total Students</span>
           <span class="stat-value">{{ students.length }}</span>
         </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-icon events-icon">🎉</div>
-        <div class="stat-info">
+      
+      <div class="stat-card purple">
+        <div class="icon-box"><i class="pi pi-calendar"></i></div>
+        <div class="stat-content">
           <span class="stat-label">Total Events</span>
           <span class="stat-value">{{ events.length }}</span>
         </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-icon part-icon">✅</div>
-        <div class="stat-info">
+
+      <div class="stat-card green">
+        <div class="icon-box"><i class="pi pi-check-circle"></i></div>
+        <div class="stat-content">
           <span class="stat-label">Participations</span>
           <span class="stat-value">{{ participation.length }}</span>
         </div>
       </div>
     </div>
 
-    <div class="panel-card chart-panel">
-      <h3>Event Popularity Overview</h3>
-      <div class="chart-container">
+    <div class="dashboard-card chart-card">
+      <div class="card-header">
+        <h3>Event Popularity Overview</h3>
+      </div>
+      <div class="chart-wrapper">
         <canvas ref="chartCanvas"></canvas>
       </div>
     </div>
 
-    <div class="forecast-section">
-      <h2 class="section-title">AI Predictive Analytics</h2>
+    <div class="dashboard-card">
+      <div class="card-header ai-header">
+        <h3><i class="pi pi-bolt"></i> AI Predictive Analytics</h3>
+      </div>
+      
+      <Accordion :activeIndex="null">
+        <AccordionTab v-for="(eventData, baseName) in forecast.events" :key="baseName">
+          <template #header>
+            <div class="accordion-custom-head">
+              <span class="event-title">{{ baseName }}</span>
+              <Tag v-if="eventData.analysis" :value="eventData.analysis.label" :severity="getSeverity(eventData.analysis.type)" />
+            </div>
+          </template>
 
-      <div v-for="(eventData, baseName) in forecast.events" :key="baseName" class="forecast-accordion">
-        <div class="accordion-header" :class="{ 'open': eventData.isOpen }" @click="toggleForecast(baseName)">
-          <div class="header-content">
-            <span class="event-name">{{ baseName }}</span>
-            <span v-if="eventData.analysis" class="trend-tag" :class="eventData.analysis.type">
-              {{ eventData.analysis.label }}
-            </span>
-          </div>
-          <span class="arrow">{{ eventData.isOpen ? '▲' : '▼' }}</span>
-        </div>
-
-        <div v-if="eventData.isOpen" class="accordion-body">
-          <p v-if="eventData.message">{{ eventData.message }}</p>
+          <div v-if="eventData.message" class="no-data-text">{{ eventData.message }}</div>
+          
           <div v-else>
-            <div class="insight-box" :class="eventData.analysis.type">
-              <div class="insight-icon">💡</div>
-              <div><strong>Analysis:</strong> {{ eventData.analysis.text }}</div>
+            <div class="insight-container" :class="eventData.analysis.type">
+              <i class="pi pi-lightbulb"></i>
+              <p><strong>Analysis:</strong> {{ eventData.analysis.text }}</p>
             </div>
 
-            <div class="forecast-chart-wrapper">
+            <div class="forecast-chart-container">
               <canvas :ref="(el) => setForecastRef(el, baseName)"></canvas>
             </div>
 
-            <table class="data-table">
-              <thead>
-                <tr><th>Year</th><th>Actual</th><th>3-Point MA</th><th>Exp. Smoothing</th></tr>
-              </thead>
-              <tbody>
-                <tr v-for="(year, index) in eventData.years" :key="year">
-                  <td>{{ year }}</td>
-                  <td>{{ eventData.actual[index] }}</td>
-                  <td>{{ eventData.moving_average[index] !== null ? eventData.moving_average[index].toFixed(2) : '-' }}</td>
-                  <td>{{ eventData.exponential_smoothing[index].toFixed(2) }}</td>
-                </tr>
-                <tr v-for="(year, index) in eventData.forecast_years" :key="year" class="forecast-row">
-                  <td>{{ year }} (Proj.)</td>
-                  <td>-</td>
-                  <td>{{ eventData.forecast_moving_average[index].toFixed(2) }}</td>
-                  <td><strong>{{ eventData.forecast_exponential[index].toFixed(2) }}</strong></td>
-                </tr>
-              </tbody>
-            </table>
+            <DataTable :value="getForecastTableData(eventData)" size="small" stripedRows class="forecast-table">
+              <Column field="year" header="Year"></Column>
+              <Column field="actual" header="Actual"></Column>
+              <Column field="ma" header="3-Pt Moving Avg"></Column>
+              <Column field="es" header="Exp. Smoothing">
+                <template #body="slotProps">
+                  <span :style="slotProps.data.year.includes('Proj') ? 'font-weight:bold; color:#10b981' : ''">
+                    {{ slotProps.data.es }}
+                  </span>
+                </template>
+              </Column>
+            </DataTable>
           </div>
-        </div>
-      </div>
+        </AccordionTab>
+      </Accordion>
     </div>
 
-    <div class="split-grid">
-      <div class="panel-card">
-        <h3>🔴 Ongoing Events</h3>
+    <div class="split-row">
+      <div class="dashboard-card">
+        <div class="card-header">
+          <h3>🔴 Ongoing Events</h3>
+        </div>
         <ul class="activity-list">
           <li v-for="e in ongoingEvents" :key="e.id">
-            <div class="activity-item">
-              <strong>{{ e.title }}</strong><small>{{ e.location }}</small>
+            <div class="activity-detail">
+              <strong>{{ e.title }}</strong>
+              <small>{{ e.location }}</small>
             </div>
-            <span class="status-badge active">Live</span>
+            <Tag value="LIVE" severity="danger" />
           </li>
-          <li v-if="ongoingEvents.length === 0" class="empty-msg">No active events.</li>
+          <li v-if="ongoingEvents.length === 0" class="empty-list">No active events right now.</li>
         </ul>
       </div>
 
-      <div class="panel-card">
-        <h3>🕒 Recent Activity</h3>
+      <div class="dashboard-card">
+        <div class="card-header">
+          <h3>🕒 Recent Activity</h3>
+        </div>
         <ul class="activity-list">
           <li v-for="p in latestParticipation" :key="p.id">
-            <div class="activity-item">
-              <strong>{{ p.student_name }}</strong><small>Checked into {{ p.event_name }}</small>
+            <div class="activity-detail">
+              <strong>{{ p.student_name }}</strong>
+              <small>Checked into {{ p.event_name }}</small>
             </div>
-            <small class="time">{{ new Date(p.time_in).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }}</small>
+            <span class="time-stamp">{{ new Date(p.time_in).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }}</span>
           </li>
         </ul>
       </div>
@@ -111,8 +114,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, computed } from "vue";
+import { ref, onMounted, computed, nextTick } from "vue";
 import Chart from "chart.js/auto";
+import Accordion from 'primevue/accordion';
+import AccordionTab from 'primevue/accordiontab';
+import Tag from 'primevue/tag';
+import DataTable from 'primevue/datatable';
+import Column from 'primevue/column';
 
 const props = defineProps(['students', 'events', 'participation']);
 
@@ -125,7 +133,35 @@ const forecastChartInstances = {};
 const ongoingEvents = computed(() => props.events.filter(e => e.is_ongoing));
 const latestParticipation = computed(() => props.participation.slice(0,5));
 
-// --- HELPER FUNCTIONS ---
+// --- STYLE HELPERS ---
+const getSeverity = (type) => {
+  if (type === 'positive') return 'success';
+  if (type === 'negative') return 'danger';
+  return 'info';
+};
+
+// --- DATA PROCESSING HELPERS ---
+const getForecastTableData = (eventData) => {
+  const rows = [];
+  eventData.years.forEach((y, i) => {
+    rows.push({
+      year: y,
+      actual: eventData.actual[i],
+      ma: eventData.moving_average[i]?.toFixed(2) || '-',
+      es: eventData.exponential_smoothing[i]?.toFixed(2)
+    });
+  });
+  eventData.forecast_years.forEach((y, i) => {
+    rows.push({
+      year: y + ' (Proj)',
+      actual: '-',
+      ma: eventData.forecast_moving_average[i]?.toFixed(2),
+      es: eventData.forecast_exponential[i]?.toFixed(2)
+    });
+  });
+  return rows;
+};
+
 function getBaseEventName(title) {
   const parts = title.split(" ");
   const lastPart = parts[parts.length - 1];
@@ -171,83 +207,49 @@ function generatePrescriptiveAnalysis(actualData, forecastData) {
 }
 
 function processForecastData(participations, events) {
-  // 1. Create a map of Event ID -> Base Name (e.g., "Tech Fest 2023" -> "Tech Fest")
   const eventMap = {};
   const grouped = {};
-
-  // Initialize EVERY event from the events list, not just those with participation
   events.forEach(e => { 
     const base = getBaseEventName(e.title);
     eventMap[e.id] = base; 
-    
-    // Ensure the group exists even if empty
-    if (!grouped[base]) {
-      grouped[base] = {}; 
-    }
+    if (!grouped[base]) grouped[base] = {}; 
   });
-
-  // 2. Populate with Participation Data
   participations.forEach(p => {
     if (!p.time_in || !p.event_id) return;
-    
-    // Use the map we built above
     const base = eventMap[p.event_id]; 
     if (!base) return;
-
     const year = new Date(p.time_in).getFullYear().toString();
-    
     if (!grouped[base][year]) grouped[base][year] = 0;
     grouped[base][year]++;
   });
-
-  // 3. Generate Analysis / Forecasts
   const eventsForecast = {};
-  
   for (const base in grouped) {
     const yearly = grouped[base];
-    const years = Object.keys(yearly).sort(); // e.g. ["2023", "2024"]
+    const years = Object.keys(yearly).sort();
     const actual = years.map(y => yearly[y]);
-
-    // CHECK: If we have less than 2 years of data (e.g., a brand new event)
     if (actual.length < 2) {
       eventsForecast[base] = { 
-        // Logic: If 0 years, say "No data". If 1 year, say "Needs more history".
-        message: actual.length === 0 
-          ? 'No participation data recorded yet.' 
-          : 'Insufficient historical data for prediction (Needs at least 2 years).', 
+        message: actual.length === 0 ? 'No participation data recorded yet.' : 'Insufficient historical data for prediction (Needs at least 2 years).', 
         isOpen: false 
       };
       continue;
     }
-
-    // ... Standard Math (Moving Avg / Exp Smoothing) ...
     const ma = calculateMovingAverage(actual, 3);
     const es = calculateExponentialSmoothing(actual, 0.4);
-    
-    // Guess next 3 years
     const lastYearInt = parseInt(years[years.length - 1]);
     const forecastYears = [lastYearInt + 1, lastYearInt + 2, lastYearInt + 3].map(String);
-    
     const forecastEs = generateForecasts(es, 3);
     const forecastMa = generateForecasts(ma.filter(v => v !== null), 3);
-
     eventsForecast[base] = {
-      years, 
-      actual, 
-      moving_average: ma, 
-      exponential_smoothing: es,
-      forecast_years: forecastYears, 
-      forecast_exponential: forecastEs, 
-      forecast_moving_average: forecastMa,
-      isOpen: false, 
-      analysis: generatePrescriptiveAnalysis(actual, forecastEs)
+      years, actual, moving_average: ma, exponential_smoothing: es,
+      forecast_years: forecastYears, forecast_exponential: forecastEs, forecast_moving_average: forecastMa,
+      isOpen: false, analysis: generatePrescriptiveAnalysis(actual, forecastEs)
     };
   }
-  
   return { events: eventsForecast };
 }
 
-// --- CHART RENDERING ---
+// --- RENDERING ---
 function renderMainChart() {
   if (!chartCanvas.value) return;
   if (chartInstance) chartInstance.destroy();
@@ -256,14 +258,18 @@ function renderMainChart() {
     type: 'bar',
     data: {
       labels: props.events.map(e => e.title),
-      datasets: [{ label: 'Participants', data: counts, backgroundColor: '#27ae60', borderRadius: 4 }]
+      datasets: [{ label: 'Participants', data: counts, backgroundColor: '#10b981', borderRadius: 4 }]
     },
     options: { responsive: true, maintainAspectRatio: false }
   });
 }
 
 function setForecastRef(el, key) {
-  if (el) forecastRefs[key] = el;
+  // PrimeVue Accordion lazy loads DOM. This captures it when opened.
+  if (el) {
+    forecastRefs[key] = el;
+    renderSingleForecastChart(key);
+  }
 }
 
 function renderSingleForecastChart(baseName) {
@@ -276,20 +282,13 @@ function renderSingleForecastChart(baseName) {
     data: {
       labels: [...data.years, ...data.forecast_years],
       datasets: [
-        { label: 'Actual', data: [...data.actual, ...data.forecast_years.map(()=>null)], borderColor: '#196f3d', backgroundColor: '#196f3d', tension: 0.1, borderWidth: 3 },
-        { label: 'Exp Smoothing', data: [...data.exponential_smoothing, ...data.forecast_exponential], borderColor: '#f39c12', borderDash: [5,5], tension: 0.3, borderWidth: 2 },
-        { label: 'Moving Avg', data: [...data.moving_average, ...data.forecast_moving_average], borderColor: '#2980b9', borderDash: [2,2], tension: 0.3, borderWidth: 2, pointRadius: 3 }
+        { label: 'Actual', data: [...data.actual, ...data.forecast_years.map(()=>null)], borderColor: '#064e3b', backgroundColor: '#064e3b', tension: 0.1, borderWidth: 3 },
+        { label: 'Exp Smoothing', data: [...data.exponential_smoothing, ...data.forecast_exponential], borderColor: '#f59e0b', borderDash: [5,5], tension: 0.3, borderWidth: 2 },
+        { label: 'Moving Avg', data: [...data.moving_average, ...data.forecast_moving_average], borderColor: '#3b82f6', borderDash: [2,2], tension: 0.3, borderWidth: 2, pointRadius: 3 }
       ]
     },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }
   });
-}
-
-async function toggleForecast(baseName) {
-  const eventData = forecast.value.events[baseName];
-  if (eventData.isOpen && forecastChartInstances[baseName]) { forecastChartInstances[baseName].destroy(); delete forecastChartInstances[baseName]; }
-  eventData.isOpen = !eventData.isOpen;
-  if (eventData.isOpen) { await nextTick(); renderSingleForecastChart(baseName); }
 }
 
 onMounted(() => {
@@ -299,48 +298,84 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; margin-bottom: 24px; }
-.stat-card { background: white; padding: 20px; border-radius: 12px; display: flex; align-items: center; gap: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 4px solid transparent; }
-.stat-card:nth-child(1) { border-color: #3498db; }
-.stat-card:nth-child(2) { border-color: #9b59b6; }
-.stat-card:nth-child(3) { border-color: #27ae60; }
-.stat-icon { font-size: 2rem; }
-.stat-info { display: flex; flex-direction: column; }
-.stat-label { font-size: 0.85rem; color: #7f8c8d; text-transform: uppercase; font-weight: 600; }
-.stat-value { font-size: 1.8rem; font-weight: 800; color: #2c3e50; }
+.overview-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
 
-.panel-card { background: white; padding: 24px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 24px; }
-.chart-panel { height: 400px; display: flex; flex-direction: column; }
-.chart-container { flex: 1; position: relative; }
+/* --- STATS CARDS --- */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
 
-.split-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 24px; }
+.stat-card {
+  background: white;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  border-left: 5px solid transparent;
+  transition: transform 0.2s;
+}
+.stat-card:hover { transform: translateY(-3px); }
+.stat-card.blue { border-left-color: #3b82f6; }
+.stat-card.purple { border-left-color: #a855f7; }
+.stat-card.green { border-left-color: #10b981; }
+
+.icon-box {
+  width: 60px; height: 60px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.5rem;
+}
+.blue .icon-box { background: #eff6ff; color: #3b82f6; }
+.purple .icon-box { background: #faf5ff; color: #a855f7; }
+.green .icon-box { background: #ecfdf5; color: #10b981; }
+
+.stat-content { display: flex; flex-direction: column; }
+.stat-label { font-size: 0.8rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-value { font-size: 2rem; font-weight: 800; color: #1e293b; line-height: 1.1; }
+
+/* --- CONTENT CARDS --- */
+.dashboard-card {
+  background: white;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+}
+
+.card-header { margin-bottom: 1.5rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 1rem; }
+.card-header h3 { margin: 0; font-size: 1.25rem; color: #1e293b; font-weight: 700; }
+.chart-wrapper { height: 350px; position: relative; }
+
+/* --- AI SECTION --- */
+.ai-header h3 { color: #064e3b; display: flex; align-items: center; gap: 8px; }
+.accordion-custom-head { width: 100%; display: flex; justify-content: space-between; align-items: center; padding-right: 1rem; }
+.event-title { font-weight: 600; color: #334155; }
+.no-data-text { color: #94a3b8; font-style: italic; padding: 1rem; }
+
+.insight-container {
+  padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;
+  display: flex; align-items: center; gap: 12px;
+  border: 1px solid transparent;
+}
+.insight-container.positive { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
+.insight-container.negative { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+.insight-container.neutral { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+
+.forecast-chart-container { height: 300px; margin-bottom: 2rem; }
+
+/* --- SPLIT ROW --- */
+.split-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem; }
 .activity-list { list-style: none; padding: 0; margin: 0; }
-.activity-list li { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
-.activity-item { display: flex; flex-direction: column; }
-.activity-item small { color: #95a5a6; }
-.status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
-.status-badge.active { background: #eafaf1; color: #27ae60; }
-
-/* FORECAST ACCORDION CSS */
-.forecast-section { margin-top: 40px; }
-.section-title { color: #145A32; font-size: 1.25rem; margin-bottom: 16px; border-left: 5px solid #27ae60; padding-left: 12px; }
-.forecast-accordion { margin-bottom: 16px; background: white; border-radius: 8px; border: 1px solid #e0e0e0; overflow: hidden; }
-.accordion-header { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: #fdfdfd; transition: background 0.2s; }
-.accordion-header:hover { background: #f4f6f6; }
-.header-content { display: flex; align-items: center; gap: 12px; }
-.event-name { font-weight: 600; color: #2c3e50; }
-.trend-tag { font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; font-weight: 700; text-transform: uppercase; }
-.trend-tag.positive { background: #eafaf1; color: #27ae60; }
-.trend-tag.negative { background: #fdedec; color: #c0392b; }
-.trend-tag.neutral { background: #f4f6f7; color: #7f8c8d; }
-.accordion-body { padding: 24px; border-top: 1px solid #f0f0f0; }
-.insight-box { display: flex; gap: 12px; padding: 16px; border-radius: 8px; background: #fafafa; border-left: 4px solid #ccc; margin-bottom: 20px; }
-.insight-box.positive { border-color: #27ae60; background: #eafaf1; }
-.insight-box.negative { border-color: #e74c3c; background: #fdedec; }
-.insight-box.neutral { border-color: #f39c12; background: #fef9e7; }
-.forecast-chart-wrapper { height: 280px; margin-bottom: 24px; }
-.data-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
-.data-table th { text-align: left; padding: 12px; background: #f8f9fa; color: #7f8c8d; font-weight: 600; border-bottom: 2px solid #eaeaea; }
-.data-table td { padding: 12px; border-bottom: 1px solid #f1f1f1; color: #2c3e50; }
-.forecast-row { background: #fafafa; color: #7f8c8d; font-style: italic; }
+.activity-list li { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; border-bottom: 1px solid #f1f5f9; }
+.activity-detail { display: flex; flex-direction: column; }
+.activity-detail strong { font-size: 0.95rem; color: #334155; }
+.activity-detail small { color: #64748b; }
+.time-stamp { color: #94a3b8; font-size: 0.85rem; }
+.empty-list { color: #94a3b8; padding: 1rem 0; font-style: italic; }
 </style>

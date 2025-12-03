@@ -1,198 +1,151 @@
 <template>
-  <div class="panel-card">
-    <div class="header-action">
-      <h3>All Events</h3>
-      <div class="action-buttons">
-        <input 
-          type="file" 
-          ref="fileInput" 
-          accept=".csv" 
-          style="display: none" 
-          @change="handleFileUpload" 
-        />
-
-        <button class="btn-secondary" @click="triggerFileInput">
-          📂 Import CSV
-        </button>
-
-        <button class="btn-primary" @click="showModal = true">+ Add Event</button>
+  <div class="view-panel">
+    <div class="view-header">
+      <div class="title-group">
+        <h3>Event Management</h3>
+      </div>
+      <div class="action-group">
+        <input type="file" ref="fileInput" accept=".csv" style="display: none" @change="handleFileUpload" />
+        <Button label="Import CSV" icon="pi pi-upload" severity="secondary" outlined size="small" @click="triggerFileInput" />
+        <Button label="New Event" icon="pi pi-plus" size="small" @click="showModal = true" />
       </div>
     </div>
 
-    <table class="data-table full-width">
-      <thead>
-        <tr>
-          <th>Title</th>
-          <th>Date & Time</th>
-          <th>Location</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="e in events" :key="e.id">
-          <td class="font-bold">{{ e.title }}</td>
-          <td>
-            <div class="date-col">
-              <span>{{ new Date(e.time_start).toLocaleDateString() }}</span>
-              <small>{{ new Date(e.time_start).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) }}</small>
+    <div class="table-container">
+      <DataTable :value="events" paginator :rows="8" stripedRows class="custom-table" scrollable scrollHeight="flex">
+        <template #empty><div class="empty-msg">No events found.</div></template>
+        
+        <Column field="title" header="Title" sortable class="font-bold"></Column>
+        <Column header="Date & Time" sortable field="time_start">
+          <template #body="slotProps">
+            <div class="datetime-cell">
+              <span class="date">{{ new Date(slotProps.data.time_start).toLocaleDateString() }}</span>
+              <span class="time">{{ new Date(slotProps.data.time_start).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) }}</span>
             </div>
-          </td>
-          <td>{{ e.location }}</td>
-          <td>
-            <span class="status-badge" :class="e.is_ongoing ? 'active' : 'closed'">
-              {{ e.is_ongoing ? 'Active' : 'Closed' }}
+          </template>
+        </Column>
+        <Column field="location" header="Location" sortable></Column>
+        <Column header="Status">
+          <template #body="slotProps">
+            <span class="status-pill" :class="slotProps.data.is_ongoing ? 'live' : 'closed'">
+              {{ slotProps.data.is_ongoing ? 'Active' : 'Closed' }}
             </span>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+          </template>
+        </Column>
+      </DataTable>
+    </div>
 
-    <BaseModal v-if="showModal" title="Create New Event" @close="showModal = false">
-      <form id="eventForm" @submit.prevent="submitEvent">
-        <div class="form-group">
+    <Dialog v-model:visible="showModal" modal header="Create Event" :style="{ width: '500px' }" class="p-fluid">
+      <form @submit.prevent="submitEvent" class="form-container">
+        <div class="field">
           <label>Event Title</label>
-          <input v-model="form.title" type="text" required />
+          <InputText v-model="form.title" required />
         </div>
-        <div class="row">
-          <div class="form-group half">
+        
+        <div class="form-row">
+          <div class="field">
             <label>Start Time</label>
-            <input v-model="form.time_start" type="datetime-local" required />
+            <input type="datetime-local" v-model="form.time_start" class="p-inputtext w-full" required />
           </div>
-          <div class="form-group half">
+          <div class="field">
             <label>End Time</label>
-            <input v-model="form.time_end" type="datetime-local" required />
+            <input type="datetime-local" v-model="form.time_end" class="p-inputtext w-full" required />
           </div>
         </div>
-        <div class="form-group">
+
+        <div class="field">
           <label>Location</label>
-          <input v-model="form.location" type="text" required />
+          <InputText v-model="form.location" required />
         </div>
-        <div class="form-group">
-          <label>Description (Optional)</label>
-          <textarea v-model="form.description" rows="3"></textarea>
+
+        <div class="field">
+          <label>Description</label>
+          <Textarea v-model="form.description" rows="3" autoResize />
+        </div>
+
+        <div class="dialog-footer">
+          <Button label="Cancel" text severity="secondary" @click="showModal = false" />
+          <Button type="submit" label="Create Event" icon="pi pi-check" :loading="isSubmitting" />
         </div>
       </form>
-
-      <template #footer>
-        <button type="button" class="btn-secondary" @click="showModal = false">Cancel</button>
-        <button type="submit" form="eventForm" class="btn-primary" :disabled="isSubmitting">
-          {{ isSubmitting ? 'Creating...' : 'Create Event' }}
-        </button>
-      </template>
-    </BaseModal>
+    </Dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive } from 'vue';
 import api from '@/services/api';
-import BaseModal from '@/components/common/BaseModal.vue';
-import Papa from 'papaparse'; // Import PapaParse
+import Papa from 'papaparse';
+import DataTable from 'primevue/datatable';
+import Column from 'primevue/column';
+import Button from 'primevue/button';
+import InputText from 'primevue/inputtext';
+import Textarea from 'primevue/textarea';
+import Dialog from 'primevue/dialog';
 
-defineProps(['events']);
+const props = defineProps(['events']);
 const emit = defineEmits(['refresh']);
-
 const showModal = ref(false);
 const isSubmitting = ref(false);
-const fileInput = ref(null); // Reference to hidden input
-
-const form = reactive({
-  title: '',
-  time_start: '',
-  time_end: '',
-  location: '',
-  description: ''
-});
-
+const fileInput = ref(null);
+const form = reactive({ title: '', time_start: '', time_end: '', location: '', description: '' });
 const formatToBackend = (val) => val.replace('T', ' ') + ':00';
 
 async function submitEvent() {
   isSubmitting.value = true;
   try {
-    const payload = {
-      ...form,
-      time_start: formatToBackend(form.time_start),
-      time_end: formatToBackend(form.time_end),
-    };
-
+    const payload = { ...form, time_start: formatToBackend(form.time_start), time_end: formatToBackend(form.time_end) };
     await api.post('/events', payload);
     Object.assign(form, { title: '', time_start: '', time_end: '', location: '', description: '' });
     showModal.value = false;
     emit('refresh');
     alert('Event created successfully!');
-  } catch (error) {
-    console.error(error);
-    alert('Failed to create event.');
-  } finally {
-    isSubmitting.value = false;
-  }
+  } catch (error) { alert('Failed to create event.'); }
+  finally { isSubmitting.value = false; }
 }
 
-// --- CSV IMPORT LOGIC ---
-const triggerFileInput = () => {
-  fileInput.value.click();
-};
-
+const triggerFileInput = () => fileInput.value.click();
 const handleFileUpload = (event) => {
   const file = event.target.files[0];
   if (!file) return;
-
   Papa.parse(file, {
-    header: true,
-    skipEmptyLines: true,
+    header: true, skipEmptyLines: true,
     complete: async (results) => {
-      // Basic validation for event CSV structure
-      const firstRow = results.data[0];
-      if (!firstRow.title || !firstRow.time_start) {
-        alert("Invalid CSV. Required headers: title, time_start, time_end, location");
-        return;
-      }
-
-      if (confirm(`Ready to import ${results.data.length} events?`)) {
+      if (confirm(`Import ${results.data.length} events?`)) {
         try {
           await api.post('/events/import', { data: results.data });
-          alert('Import Successful!');
-          emit('refresh');
-        } catch (error) {
-          console.error(error);
-          alert('Import failed. Check date formats (YYYY-MM-DD HH:mm:ss) and try again.');
-        } finally {
-          event.target.value = '';
-        }
-      } else {
-        event.target.value = '';
+          alert('Import Successful!'); emit('refresh');
+        } catch (e) { alert('Import failed.'); }
       }
+      event.target.value = '';
     }
   });
 };
 </script>
 
 <style scoped>
-.panel-card { background: white; padding: 24px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-.header-action { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.header-action h3 { margin: 0; color: #2c3e50; }
+/* Reuse styles from StudentsTab + specific ones here */
+.view-panel { background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+.view-header { padding: 1.5rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background-color: #f8fafc; }
+.title-group h3 { margin: 0; font-size: 1.25rem; color: #1e293b; }
+.action-group { display: flex; gap: 10px; }
+.table-container { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+.custom-table { flex: 1; }
+.empty-msg { text-align: center; padding: 2rem; color: #94a3b8; }
+.font-bold { font-weight: 600; color: #0f172a; }
 
-/* Wrapper for buttons */
-.action-buttons { display: flex; gap: 10px; }
+/* Custom Cells */
+.datetime-cell { display: flex; flex-direction: column; }
+.datetime-cell .time { font-size: 0.8rem; color: #64748b; }
+.status-pill { padding: 4px 12px; border-radius: 20px; font-weight: 600; font-size: 0.85rem; }
+.status-pill.live { background: #dcfce7; color: #15803d; }
+.status-pill.closed { background: #f1f5f9; color: #64748b; }
 
-.data-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
-.data-table th { text-align: left; padding: 12px; background: #f8f9fa; color: #7f8c8d; font-weight: 600; border-bottom: 2px solid #eaeaea; }
-.data-table td { padding: 12px; border-bottom: 1px solid #f1f1f1; color: #2c3e50; vertical-align: middle; }
-.font-bold { font-weight: 600; color: #2c3e50; }
-.date-col { display: flex; flex-direction: column; line-height: 1.2; }
-.date-col small { color: #95a5a6; font-size: 0.8em; }
-
-.status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
-.status-badge.active { background: #eafaf1; color: #27ae60; }
-.status-badge.closed { background: #fdedec; color: #c0392b; }
-
-.btn-primary { background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: background 0.2s; }
-.btn-primary:hover { background: #219150; }
-.btn-secondary { background: #ecf0f1; color: #7f8c8d; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; }
-
-.form-group { margin-bottom: 16px; display: flex; flex-direction: column; gap: 6px; }
-.form-group label { font-size: 0.85rem; font-weight: 600; color: #34495e; }
-.form-group input, .form-group select, .form-group textarea { padding: 10px; border: 1px solid #dfe6e9; border-radius: 6px; font-size: 0.95rem; font-family: inherit; }
-.row { display: flex; gap: 16px; }
-.half { flex: 1; }
+/* Forms */
+.form-container { display: flex; flex-direction: column; gap: 1rem; margin-top: 0.5rem; }
+.field { display: flex; flex-direction: column; gap: 0.5rem; }
+.field label { font-size: 0.875rem; font-weight: 600; color: #475569; }
+.form-row { display: flex; gap: 1rem; }
+.form-row > * { flex: 1; }
+.dialog-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 1.5rem; }
 </style>

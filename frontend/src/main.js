@@ -1,23 +1,34 @@
-import { createApp } from 'vue';
-import App from './App.vue';
-import router from './router';
-import { createPinia } from 'pinia';
+import { createApp } from 'vue'
+import { createPinia } from 'pinia'
+import App from './App.vue'
+import router from './router'
 
-// 1. Change to Named Imports (Required for Vite/ESM)
+// PrimeVue Imports
+import PrimeVue from 'primevue/config';
+import Aura from '@primevue/themes/aura';
+import 'primeicons/primeicons.css'; // Mandatory for icons
+
+// QR Code Reader Imports
 import { QrcodeStream, QrcodeDropZone, QrcodeCapture } from "vue-qrcode-reader";
 
-// Note: I removed 'setZXingModuleOverrides' and 'import * as ZXing'. 
-// These are typically legacy Webpack workarounds and are not needed 
-// or supported in the modern vue-qrcode-reader v5+ with Vite.
+const app = createApp(App)
 
-const app = createApp(App);
-
-// 2. Register the components globally
-// Since there is no default export, we cannot use app.use(VueQrcodeReader)
+// Register QR components globally
 app.component('QrcodeStream', QrcodeStream);
 app.component('QrcodeDropZone', QrcodeDropZone);
 app.component('QrcodeCapture', QrcodeCapture);
 
-app.use(createPinia());
-app.use(router);
-app.mount('#app');
+app.use(createPinia())
+app.use(router)
+
+// Initialize PrimeVue with Aura Theme
+app.use(PrimeVue, {
+    theme: {
+        preset: Aura,
+        options: {
+            darkModeSelector: '.my-app-dark', // Disable auto dark mode for consistency
+        }
+    }
+});
+
+app.mount('#app')

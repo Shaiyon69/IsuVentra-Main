@@ -1,121 +1,160 @@
 <template>
-  <div id="app">
-    <nav v-if="auth.isAuthenticated">
-      
-      <router-link to="/dashboard" v-if="auth.role === 'user'">Dashboard</router-link>
-      <router-link to="/join" v-if="auth.role === 'user'">Join Event</router-link>
-      
-      <router-link to="/admin" v-if="auth.role === 'admin'">Admin Dashboard</router-link>
-      
-      <button @click="logout">Logout</button>
-    </nav>
+  <div class="app-container">
+    <Menubar 
+      v-if="!isAdminRoute" 
+      :model="menuItems" 
+      class="app-menubar border-none border-noround shadow-2"
+    >
+      <template #start>
+        <div class="flex align-items-center gap-2 cursor-pointer" @click="router.push('/')">
+          <i class="pi pi-box text-2xl text-primary"></i>
+          <span class="font-bold text-xl text-900">ISUVentra</span>
+        </div>
+      </template>
 
-    <nav v-else>
-      <router-link to="/">Login</router-link>
-      <router-link to="/register">Register</router-link>
-    </nav>
+      <template #end>
+        <div v-if="auth.isAuthenticated" class="flex align-items-center gap-2">
+          <span class="hidden md:inline-block text-sm font-medium text-700 mr-2">
+            {{ auth.user?.name || 'User' }}
+          </span>
+          <Button 
+            label="Logout" 
+            icon="pi pi-power-off" 
+            severity="danger" 
+            text 
+            size="small"
+            @click="logout" 
+          />
+        </div>
+        <div v-else class="flex gap-2">
+          <Button label="Login" text size="small" @click="router.push('/login')" />
+          <Button label="Register" severity="primary" size="small" @click="router.push('/register')" />
+        </div>
+      </template>
+    </Menubar>
 
-    <router-view />
+    <main :class="isAdminRoute ? 'admin-view' : 'scrollable-view'">
+      <router-view v-slot="{ Component }">
+        <transition name="fade" mode="out-in">
+          <component :is="Component" />
+        </transition>
+      </router-view>
+    </main>
   </div>
 </template>
 
 <script setup>
+import { computed, onMounted } from "vue";
+import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
-import { onMounted } from "vue";
-import { useRouter } from "vue-router";
 import api from "@/services/api";
+
+// Manual Imports to ensure stability
+import Menubar from 'primevue/menubar';
+import Button from 'primevue/button';
 
 const auth = useAuthStore();
 const router = useRouter();
+const route = useRoute();
+
+// Detect Admin Route to toggle layout modes
+const isAdminRoute = computed(() => {
+  return route.path.startsWith('/admin');
+});
+
+const menuItems = computed(() => {
+  if (!auth.isAuthenticated) return [];
+  // Only Student items here. Admin nav is inside AdminPanel.vue
+  if (auth.role === 'user') {
+    return [
+      { label: 'Dashboard', icon: 'pi pi-home', command: () => router.push('/dashboard') },
+      { label: 'Scan QR', icon: 'pi pi-qrcode', command: () => router.push('/join') }
+    ];
+  }
+  return [];
+});
 
 const logout = () => {
   auth.logout();
-  router.push({ name: "login" });
+  router.push("/login");
 };
 
 onMounted(async () => {
   if (auth.token) {
     try {
       const response = await api.get('/validate-token');
-      if (response.data.user) {
-        // Match the response structure from your backend
-        auth.setAuth(response.data.user, auth.token);
-      }
+      if (response.data.user) auth.setAuth(response.data.user, auth.token);
     } catch (e) {
-
       auth.logout();
-      if (router.currentRoute.value.meta.requiresAuth) {
-        router.push({ name: "login" });
-      }
+      if (router.currentRoute.value.meta.requiresAuth) router.push("/login");
     }
   }
 });
 </script>
 
 <style>
-:root {
-  --primary-bg: #ffffff;
-  --secondary-bg: #f5f5f5;
-  --accent: #4caf50;
-  --light-accent: #81c784;
-  --outline-accent: #81c784;
-  --text-color: #2d4a22;
-  --error-color: #ef5350;
-  --success-color: #81c784;
-  --border-color: #e0e0e0;
+/* --- GLOBAL RESET (The "Squashed" Fix) --- */
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  overflow: hidden; /* KILL SWITCH: Prevents window scrollbars entirely */
+  background-color: var(--surface-ground, #f8f9fa);
+  color: var(--text-color, #2d4a22);
+  font-family: var(--font-family, Avenir, Helvetica, Arial, sans-serif);
+  -webkit-font-smoothing: antialiased;
 }
 
 #app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: var(--text-color);
-  background-color: var(--primary-bg);
-  min-height: 100vh;
+  width: 100%;
+  height: 100%;
 }
 
-nav {
+*, *:before, *:after {
+  box-sizing: inherit;
+}
+
+/* --- APP LAYOUT --- */
+.app-container {
   display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 15px;
-  padding: 15px;
-  margin-bottom: 20px;
-  background-color: var(--secondary-bg);
-  border-bottom: 1px solid var(--border-color);
+  flex-direction: column;
+  height: 100vh; /* Force app to exactly fill screen */
+  width: 100vw;
 }
 
-nav a {
-  font-weight: bold;
-  color: var(--text-color);
-  text-decoration: none;
+/* Menubar: Fixed at top, z-index ensures it floats above content */
+.app-menubar {
+  background-color: var(--surface-card, #ffffff) !important;
+  padding: 0.5rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  z-index: 999;
+  flex-shrink: 0; /* Prevents navbar from shrinking if content is huge */
+}
+
+/* --- VIEW MODES --- */
+
+/* 1. Student View (needs to scroll) */
+.scrollable-view {
+  flex: 1;
+  overflow-y: auto; /* Adds scrollbar ONLY to content area */
+  overflow-x: hidden;
   position: relative;
-  padding: 0 10px;
+  width: 100%;
 }
 
-nav a + a::before {
-  content: "|";
-  position: absolute;
-  left: 0;
-  color: var(--outline-accent);
+/* 2. Admin View (locks scroll, passes control to child) */
+.admin-view {
+  flex: 1;
+  overflow: hidden; /* No scroll here, AdminPanel.vue handles it */
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
-nav a.router-link-exact-active {
-  color: var(--accent);
-}
-
-nav button {
-  cursor: pointer;
-  font-weight: bold;
-  background: var(--error-color);
-  color: var(--primary-bg);
-  border: none;
-  padding: 5px 10px;
-  border-radius: 3px;
-}
-
-nav button:hover {
-  background: #e57373;
-}
+/* Transitions */
+.fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>

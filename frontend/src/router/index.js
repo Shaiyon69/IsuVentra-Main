@@ -40,11 +40,11 @@ const routes = [
     name: "admin",
     component: AdminPanel,
     meta: { requiresAuth: true, role: "admin" },
-    redirect: { name: 'admin-overview' }, // Redirect /admin to /admin/overview
+    redirect: { name: 'admin-dashboard' }, // Redirect /admin to /admin/overview
     children: [
       {
-        path: "overview",
-        name: "admin-overview",
+        path: "dashboard",
+        name: "admin-dashboard",
         component: OverviewTab
       },
       {

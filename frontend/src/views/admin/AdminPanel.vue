@@ -1,58 +1,76 @@
 <template>
   <div class="admin-layout">
     <aside class="sidebar">
-      <div class="sidebar-header">
-        <h2>ISUVentra</h2>
-        <span class="version">v1.1 Admin</span>
+      <div class="brand-section">
+        <div class="logo-icon">
+          <i class="pi pi-box"></i>
+        </div>
+        <div class="brand-info">
+          <h2 class="brand-name">ISUVentra</h2>
+          <span class="brand-badge">ADMIN v1.1</span>
+        </div>
       </div>
 
-      <nav class="sidebar-nav">
-        <router-link :to="{ name: 'admin-overview' }" active-class="active" class="nav-item">
-          <span class="icon">📊</span> <span class="label">Overview</span>
+      <nav class="nav-menu">
+        <router-link :to="{ name: 'admin-dashboard' }" class="nav-item" active-class="active">
+          <i class="pi pi-chart-bar"></i>
+          <span>Dashboard</span>
         </router-link>
 
-        <router-link :to="{ name: 'admin-students' }" active-class="active" class="nav-item">
-          <span class="icon">👥</span> <span class="label">Students</span>
+        <div class="nav-divider">MANAGEMENT</div>
+
+        <router-link :to="{ name: 'admin-students' }" class="nav-item" active-class="active">
+          <i class="pi pi-users"></i>
+          <span>Students</span>
         </router-link>
 
-        <router-link :to="{ name: 'admin-events' }" active-class="active" class="nav-item">
-          <span class="icon">📅</span> <span class="label">Events</span>
+        <router-link :to="{ name: 'admin-events' }" class="nav-item" active-class="active">
+          <i class="pi pi-calendar"></i>
+          <span>Events</span>
         </router-link>
 
-        <router-link :to="{ name: 'admin-participation' }" active-class="active" class="nav-item">
-          <span class="icon">📋</span> <span class="label">Participation</span>
+        <router-link :to="{ name: 'admin-participation' }" class="nav-item" active-class="active">
+          <i class="pi pi-list"></i>
+          <span>Participation</span>
         </router-link>
       </nav>
 
-      <div class="sidebar-footer">
-        <div class="user-info">
-          <div class="avatar">A</div>
-          <div class="details">
-            <span class="name">Administrator</span>
-            <button @click="handleLogout" class="logout-btn">Logout</button>
+      <div class="user-footer">
+        <div class="user-card">
+          <Avatar label="A" class="user-avatar" shape="circle" />
+          <div class="user-meta">
+            <span class="user-name">Administrator</span>
+            <span class="logout-link" @click="handleLogout">Sign Out</span>
           </div>
         </div>
       </div>
     </aside>
 
-    <main class="main-content">
-      <header class="top-bar">
-        <h1>{{ pageTitle }}</h1>
-        <div class="date-display">{{ new Date().toLocaleDateString() }}</div>
+    <main class="main-wrapper">
+      <header class="top-header">
+        <h1 class="page-title">{{ pageTitle }}</h1>
+        <div class="header-right">
+          <div class="date-badge">
+            <i class="pi pi-calendar"></i>
+            {{ new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) }}
+          </div>
+        </div>
       </header>
 
-      <div v-if="isLoading" class="loading-container">
-        <div class="spinner"></div>
-        <p>Loading Dashboard Data...</p>
-      </div>
+      <div class="content-area">
+        <div v-if="isLoading" class="loading-overlay">
+          <ProgressSpinner style="width: 50px; height: 50px" strokeWidth="4" />
+          <p>Syncing Data...</p>
+        </div>
 
-      <div v-else class="content-scroll-area">
-        <router-view
-          :students="students"
-          :events="events"
-          :participation="participation"
-          @refresh="loadAdminData"
-        ></router-view>
+        <div v-else class="router-view-container">
+          <router-view
+            :students="students"
+            :events="events"
+            :participation="participation"
+            @refresh="loadAdminData"
+          ></router-view>
+        </div>
       </div>
     </main>
   </div>
@@ -64,6 +82,10 @@ import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import api from "@/services/api";
 
+// PrimeVue Component Imports
+import Avatar from 'primevue/avatar';
+import ProgressSpinner from 'primevue/progressspinner';
+
 const route = useRoute();
 const router = useRouter();
 const auth = useAuthStore();
@@ -73,16 +95,16 @@ const students = ref([]);
 const events = ref([]);
 const participation = ref([]);
 
-// Compute title based on the current Route Name
+// Compute page title from route name
 const pageTitle = computed(() => {
-  const name = route.name ? route.name.toString().replace('admin-', '') : 'overview';
+  if (!route.name) return 'Dashboard';
+  const name = route.name.toString().replace('admin-', '');
   return name.charAt(0).toUpperCase() + name.slice(1);
 });
 
 async function loadAdminData() {
-  // If we already have data, don't show the full spinner, just refresh silently
-  // unless the array is empty (first load)
-  if(students.value.length === 0) isLoading.value = true;
+  // Only show full loading spinner if we have NO data
+  if (students.value.length === 0) isLoading.value = true;
 
   try {
     const [stuRes, eveRes, partRes] = await Promise.all([
@@ -108,65 +130,210 @@ function handleLogout() {
 onMounted(loadAdminData);
 </script>
 
-<style>
-/* GLOBAL RESET */
-html, body {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: 'Segoe UI', sans-serif;
-  background-color: #f4f6f8;
+<style scoped>
+/* --- LAYOUT STRUCTURE --- */
+.admin-layout {
+  display: flex;
   height: 100vh;
+  width: 100%;
+  background-color: #f8fafc; /* Light Slate Background */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   overflow: hidden;
 }
-*, *:before, *:after { box-sizing: inherit; }
-</style>
 
-<style scoped>
-/* MAIN LAYOUT */
-.admin-layout { display: flex; flex-direction: row; height: 100vh; width: 100vw; }
+/* --- SIDEBAR STYLING --- */
+.sidebar {
+  width: 260px;
+  min-width: 260px;
+  background-color: #064e3b; /* Dark Emerald Green */
+  color: white;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
+  z-index: 50;
+}
 
-/* SIDEBAR STYLING */
-.sidebar { width: 260px; min-width: 260px; background: #145A32; color: white; display: flex; flex-direction: column; box-shadow: 4px 0 12px rgba(0,0,0,0.1); z-index: 100; }
-.sidebar-header { padding: 24px; background: rgba(0,0,0,0.1); }
-.sidebar-header h2 { margin: 0; font-size: 1.4rem; font-weight: 700; letter-spacing: 0.5px; }
-.version { font-size: 0.75rem; opacity: 0.7; text-transform: uppercase; }
+.brand-section {
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
 
-.sidebar-nav { display: flex; flex-direction: column; padding: 20px 10px; gap: 8px; flex: 1; }
+.logo-icon {
+  width: 40px;
+  height: 40px;
+  background: #34d399; /* Light Emerald */
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #064e3b;
+  font-size: 1.25rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.brand-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-name {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.brand-badge {
+  font-size: 0.7rem;
+  opacity: 0.8;
+  letter-spacing: 1px;
+}
+
+.nav-menu {
+  flex: 1;
+  padding: 1.5rem 1rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.nav-divider {
+  font-size: 0.75rem;
+  color: #6ee7b7; /* Soft Green */
+  font-weight: 700;
+  margin: 1.5rem 0 0.5rem 0.8rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
 
 .nav-item {
-  display: flex; align-items: center; gap: 12px; padding: 14px 16px;
-  width: 100%; border: none; background: transparent;
-  color: #a9dfbf; cursor: pointer; border-radius: 8px;
-  transition: all 0.2s; font-size: 0.95rem; text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  color: #d1fae5;
   text-decoration: none;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  font-size: 0.95rem;
 }
 
-.nav-item:hover, .nav-item.active {
-  background: #27ae60; color: white; transform: translateX(5px);
+.nav-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
 }
 
-.sidebar-footer { padding: 20px; border-top: 1px solid rgba(255,255,255,0.1); }
-.user-info { display: flex; align-items: center; gap: 10px; }
-.avatar { width: 36px; height: 36px; background: #2ecc71; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #0e3e23; }
-.details { display: flex; flex-direction: column; }
-.name { font-size: 0.9rem; font-weight: 600; }
-.logout-btn { background: none; border: none; color: #fab1a0; cursor: pointer; padding: 0; text-align: left; font-size: 0.75rem; margin-top: 2px;}
-.logout-btn:hover { text-decoration: underline; }
-
-/* MAIN CONTENT */
-.main-content { flex: 1; display: flex; flex-direction: column; background: #f4f6f8; height: 100%; }
-.top-bar { padding: 20px 32px; background: white; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; }
-.top-bar h1 { margin: 0; font-size: 1.5rem; color: #2c3e50; }
-.date-display { color: #7f8c8d; font-size: 0.9rem; }
-.content-scroll-area { padding: 32px; overflow-y: auto; flex: 1; }
-
-/* SPINNER */
-.loading-container {
-  display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; color: #7f8c8d;
+.nav-item.active {
+  background-color: #10b981; /* Primary Green */
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
-.spinner {
-  width: 40px; height: 40px; border: 4px solid #e0e0e0; border-top: 4px solid #27ae60; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px;
+
+.nav-item i {
+  font-size: 1.1rem;
 }
-@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+.user-footer {
+  padding: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.user-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-avatar {
+  background-color: #34d399 !important;
+  color: #064e3b !important;
+  font-weight: bold;
+}
+
+.user-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.logout-link {
+  font-size: 0.8rem;
+  color: #fca5a5; /* Light Red */
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.logout-link:hover {
+  color: #f87171;
+  text-decoration: underline;
+}
+
+/* --- MAIN CONTENT AREA --- */
+.main-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.top-header {
+  height: 70px;
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 2rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.page-title {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #1e293b;
+  font-weight: 700;
+}
+
+.date-badge {
+  background-color: #f1f5f9;
+  padding: 8px 16px;
+  border-radius: 20px;
+  color: #64748b;
+  font-size: 0.9rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.content-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2rem;
+  position: relative;
+}
+
+.loading-overlay {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+}
+
+.router-view-container {
+  max-width: 1600px;
+  margin: 0 auto;
+}
 </style>
