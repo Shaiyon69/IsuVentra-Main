@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../screens/home_screen.dart';
+import '../screens_admin/admin_home_screen.dart'; // Import the new Admin Home
 import '../providers/auth_provider.dart';
 
 class Login extends StatefulWidget {
@@ -13,12 +14,14 @@ class Login extends StatefulWidget {
 class _LoginState extends State<Login> {
   final _formKey = GlobalKey<FormState>();
 
-  final TextEditingController _studentIdController = TextEditingController();
-  final TextEditingController _lrnController = TextEditingController();
+  // Renamed controllers to be generic for both modes
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
   bool _rememberMe = false;
   bool _isCheckingAuth = true;
+  bool _isAdminLogin = false; // Toggle state
 
   @override
   void initState() {
@@ -27,7 +30,7 @@ class _LoginState extends State<Login> {
       final auth = context.read<AuthProvider>();
 
       if (auth.savedEmail != null) {
-        _studentIdController.text = auth.savedEmail!;
+        _usernameController.text = auth.savedEmail!;
         if (mounted) {
           setState(() => _rememberMe = auth.rememberMe);
         }
@@ -37,35 +40,49 @@ class _LoginState extends State<Login> {
       if (!mounted) return;
 
       if (isLoggedIn) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
+        _navigateBasedOnRole(auth.user?.isAdmin ?? false);
       } else {
         setState(() => _isCheckingAuth = false);
       }
     });
   }
 
+  void _navigateBasedOnRole(bool isAdmin) {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            isAdmin ? const AdminHomeScreen() : const HomeScreen(),
+      ),
+    );
+  }
+
   Future<void> _performLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final studentId = _studentIdController.text.trim();
-    final lrn = _lrnController.text.trim();
+    final identifier = _usernameController.text.trim();
+    final password = _passwordController.text.trim();
     final auth = context.read<AuthProvider>();
-    final success = await auth.login(studentId, lrn, remember: _rememberMe);
+
+    final success = await auth.login(
+      identifier,
+      password,
+      remember: _rememberMe,
+    );
 
     if (!mounted) return;
 
     if (success) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
-      );
+      final isAdmin = auth.user?.isAdmin ?? false;
+      _navigateBasedOnRole(isAdmin);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Invalid Student ID or LRN'),
+        SnackBar(
+          content: Text(
+            _isAdminLogin
+                ? 'Invalid Admin Credentials'
+                : 'Invalid Student ID or LRN',
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -74,8 +91,8 @@ class _LoginState extends State<Login> {
 
   @override
   void dispose() {
-    _studentIdController.dispose();
-    _lrnController.dispose();
+    _usernameController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -87,6 +104,7 @@ class _LoginState extends State<Login> {
 
     final size = MediaQuery.of(context).size;
     final isLoading = context.watch<AuthProvider>().isLoading;
+    final theme = Theme.of(context);
 
     return Scaffold(
       body: GestureDetector(
@@ -97,8 +115,8 @@ class _LoginState extends State<Login> {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                Theme.of(context).colorScheme.primary,
-                Theme.of(context).colorScheme.primaryContainer,
+                theme.colorScheme.primary,
+                theme.colorScheme.primaryContainer,
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -106,41 +124,12 @@ class _LoginState extends State<Login> {
           ),
           child: Stack(
             clipBehavior: Clip.none,
-            //  Decor
             children: [
-              Positioned(
-                top: -80,
-                left: -60,
-                child: Container(
-                  width: 220,
-                  height: 220,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [
-                        const Color.fromRGBO(255, 255, 255, 0.06),
-                        const Color.fromRGBO(255, 255, 255, 0.02),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 40,
-                right: -20,
-                child: Container(
-                  width: 96,
-                  height: 96,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Color.fromRGBO(255, 255, 255, 0.03),
-                  ),
-                ),
-              ),
+              // Background Decor
+              Positioned(top: -80, left: -60, child: _buildCircleDecor(220)),
+              Positioned(top: 40, right: -20, child: _buildCircleDecor(96)),
 
-              // Card
+              // Login Card
               Center(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(
@@ -164,20 +153,19 @@ class _LoginState extends State<Login> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             const SizedBox(height: 6),
+
+                            // Logo Area
                             Center(
                               child: Column(
                                 children: [
                                   CircleAvatar(
                                     radius: 36,
-                                    backgroundColor: Theme.of(
-                                      context,
-                                    ).colorScheme.primaryContainer,
+                                    backgroundColor:
+                                        theme.colorScheme.primaryContainer,
                                     child: Icon(
                                       Icons.school,
                                       size: 36,
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.primary,
+                                      color: theme.colorScheme.primary,
                                     ),
                                   ),
                                   const SizedBox(height: 12),
@@ -193,24 +181,57 @@ class _LoginState extends State<Login> {
                             ),
                             const SizedBox(height: 18),
 
+                            // Role Toggle
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.grey.shade300),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildRoleButton('Student', false),
+                                  ),
+                                  Expanded(
+                                    child: _buildRoleButton('Admin', true),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 18),
+
                             // Form
                             Form(
                               key: _formKey,
                               child: Column(
                                 children: [
+                                  // Username / Student ID Field
                                   TextFormField(
-                                    controller: _studentIdController,
-                                    keyboardType: TextInputType.text,
-                                    decoration: const InputDecoration(
-                                      prefixIcon: Icon(Icons.badge_outlined),
-                                      labelText: 'Student ID',
-                                      hintText: '23-XXXX',
-                                      border: OutlineInputBorder(),
+                                    controller: _usernameController,
+                                    keyboardType: _isAdminLogin
+                                        ? TextInputType.emailAddress
+                                        : TextInputType.text,
+                                    decoration: InputDecoration(
+                                      prefixIcon: Icon(
+                                        _isAdminLogin
+                                            ? Icons.email_outlined
+                                            : Icons.badge_outlined,
+                                      ),
+                                      labelText: _isAdminLogin
+                                          ? 'Email Address'
+                                          : 'Student ID',
+                                      hintText: _isAdminLogin
+                                          ? 'admin@isu.edu.ph'
+                                          : '23-XXXX',
+                                      border: const OutlineInputBorder(),
                                     ),
                                     validator: (value) {
                                       if (value == null ||
                                           value.trim().isEmpty) {
-                                        return 'Please enter your Student ID';
+                                        return _isAdminLogin
+                                            ? 'Please enter your Email'
+                                            : 'Please enter your Student ID';
                                       }
                                       return null;
                                     },
@@ -218,16 +239,20 @@ class _LoginState extends State<Login> {
                                   ),
                                   const SizedBox(height: 12),
 
-                                  // LRN
+                                  // Password / LRN Field
                                   TextFormField(
-                                    controller: _lrnController,
+                                    controller: _passwordController,
                                     obscureText: _obscurePassword,
-                                    keyboardType: TextInputType.number,
+                                    keyboardType: _isAdminLogin
+                                        ? TextInputType.text
+                                        : TextInputType.number,
                                     decoration: InputDecoration(
                                       prefixIcon: const Icon(
                                         Icons.lock_outline,
                                       ),
-                                      labelText: 'LRN (Password)',
+                                      labelText: _isAdminLogin
+                                          ? 'Password'
+                                          : 'LRN (Password)',
                                       border: const OutlineInputBorder(),
                                       suffixIcon: IconButton(
                                         icon: Icon(
@@ -243,9 +268,11 @@ class _LoginState extends State<Login> {
                                     ),
                                     validator: (value) {
                                       if (value == null || value.isEmpty) {
-                                        return 'Please enter your LRN';
+                                        return _isAdminLogin
+                                            ? 'Please enter password'
+                                            : 'Please enter your LRN';
                                       }
-                                      if (value.length < 6) {
+                                      if (!_isAdminLogin && value.length < 6) {
                                         return 'LRN must be at least 6 characters';
                                       }
                                       return null;
@@ -271,7 +298,7 @@ class _LoginState extends State<Login> {
                             ),
                             const SizedBox(height: 6),
 
-                            // Button
+                            // Submit Button
                             SizedBox(
                               height: 48,
                               child: ElevatedButton(
@@ -280,15 +307,15 @@ class _LoginState extends State<Login> {
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(10),
                                   ),
+                                  backgroundColor: theme.colorScheme.primary,
+                                  foregroundColor: theme.colorScheme.onPrimary,
                                 ),
                                 child: isLoading
                                     ? SizedBox(
                                         width: 24,
                                         height: 24,
                                         child: CircularProgressIndicator(
-                                          color: Theme.of(
-                                            context,
-                                          ).colorScheme.onPrimary,
+                                          color: theme.colorScheme.onPrimary,
                                           strokeWidth: 2,
                                         ),
                                       )
@@ -308,6 +335,63 @@ class _LoginState extends State<Login> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRoleButton(String title, bool isForAdmin) {
+    final isSelected = _isAdminLogin == isForAdmin;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _isAdminLogin = isForAdmin;
+          _formKey.currentState?.reset(); // Clear errors when switching
+          _usernameController.clear();
+          _passwordController.clear();
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 4,
+                    offset: Offset(0, 1),
+                  ),
+                ]
+              : [],
+        ),
+        child: Text(
+          title,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isSelected ? Colors.black87 : Colors.black54,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCircleDecor(double size) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          colors: [
+            const Color.fromRGBO(255, 255, 255, 0.06),
+            const Color.fromRGBO(255, 255, 255, 0.02),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
       ),
     );
