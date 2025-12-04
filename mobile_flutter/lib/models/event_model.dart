@@ -2,9 +2,9 @@ class Event {
   final int id;
   final String title;
   final String? description;
-  final String timeStart;
-  final String timeEnd;
-  final String location;
+  final DateTime timeStart;
+  final DateTime timeEnd;
+  final String? location;
 
   Event({
     required this.id,
@@ -12,7 +12,7 @@ class Event {
     this.description,
     required this.timeStart,
     required this.timeEnd,
-    required this.location,
+    this.location,
   });
 
   factory Event.fromJson(Map<String, dynamic> json) {
@@ -20,20 +20,9 @@ class Event {
       id: json['id'],
       title: json['title'],
       description: json['description'],
-      timeStart: json['time_start'],
-      timeEnd: json['time_end'],
+      timeStart: DateTime.parse(json['time_start']),
+      timeEnd: DateTime.parse(json['time_end']),
       location: json['location'],
     );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'title': title,
-      'description': description,
-      'time_start': timeStart,
-      'time_end': timeEnd,
-      'location': location,
-    };
   }
 }

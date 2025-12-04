@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import '../models/participation.dart';
+import '../models/participation_model.dart';
 import 'api_service.dart';
 
 class ParticipationService {

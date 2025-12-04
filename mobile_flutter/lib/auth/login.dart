@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
-// import '../app_providers_wrapper.dart';
-import '../app_providers_wrapper.dart';
 import '../screens/home_screen.dart';
+import '../providers/auth_provider.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -14,27 +12,37 @@ class Login extends StatefulWidget {
 
 class _LoginState extends State<Login> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+
+  final TextEditingController _studentIdController = TextEditingController();
+  final TextEditingController _lrnController = TextEditingController();
+
   bool _obscurePassword = true;
   bool _rememberMe = false;
+  bool _isCheckingAuth = true;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final auth = context.read<AuthProvider>();
-      if (auth.savedEmail != null) {
-        _emailController.text = auth.savedEmail!;
-      }
-      setState(() => _rememberMe = auth.rememberMe);
 
-      if (auth.token != null && auth.token!.isNotEmpty) {
-        if (!mounted) return;
+      if (auth.savedEmail != null) {
+        _studentIdController.text = auth.savedEmail!;
+        if (mounted) {
+          setState(() => _rememberMe = auth.rememberMe);
+        }
+      }
+      final isLoggedIn = await auth.tryAutoLogin();
+
+      if (!mounted) return;
+
+      if (isLoggedIn) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
+      } else {
+        setState(() => _isCheckingAuth = false);
       }
     });
   }
@@ -42,37 +50,43 @@ class _LoginState extends State<Login> {
   Future<void> _performLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
-
+    final studentId = _studentIdController.text.trim();
+    final lrn = _lrnController.text.trim();
     final auth = context.read<AuthProvider>();
-    final success = await auth.login(email, password, remember: _rememberMe);
+    final success = await auth.login(studentId, lrn, remember: _rememberMe);
 
     if (!mounted) return;
+
     if (success) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const AppProvidersWrapper()),
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid email or password')),
+        const SnackBar(
+          content: Text('Invalid Student ID or LRN'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
 
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
+    _studentIdController.dispose();
+    _lrnController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isCheckingAuth) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     final size = MediaQuery.of(context).size;
-    final auth = context.watch<AuthProvider>();
-    final isLoading = auth.isLoading;
+    final isLoading = context.watch<AuthProvider>().isLoading;
 
     return Scaffold(
       body: GestureDetector(
@@ -92,6 +106,7 @@ class _LoginState extends State<Login> {
           ),
           child: Stack(
             clipBehavior: Clip.none,
+            //  Decor
             children: [
               Positioned(
                 top: -80,
@@ -103,33 +118,11 @@ class _LoginState extends State<Login> {
                     shape: BoxShape.circle,
                     gradient: LinearGradient(
                       colors: [
-                        Color.fromRGBO(255, 255, 255, 0.06),
-                        Color.fromRGBO(255, 255, 255, 0.02),
+                        const Color.fromRGBO(255, 255, 255, 0.06),
+                        const Color.fromRGBO(255, 255, 255, 0.02),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: -70,
-                right: -90,
-                child: Transform.rotate(
-                  angle: -0.4,
-                  child: Container(
-                    width: 260,
-                    height: 160,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(36),
-                      gradient: LinearGradient(
-                        colors: [
-                          Color.fromRGBO(255, 255, 255, 0.04),
-                          Color.fromRGBO(255, 255, 255, 0.01),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
                     ),
                   ),
                 ),
@@ -140,12 +133,14 @@ class _LoginState extends State<Login> {
                 child: Container(
                   width: 96,
                   height: 96,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     shape: BoxShape.circle,
                     color: Color.fromRGBO(255, 255, 255, 0.03),
                   ),
                 ),
               ),
+
+              // Card
               Center(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(
@@ -178,7 +173,7 @@ class _LoginState extends State<Login> {
                                       context,
                                     ).colorScheme.primaryContainer,
                                     child: Icon(
-                                      Icons.event,
+                                      Icons.school,
                                       size: 36,
                                       color: Theme.of(
                                         context,
@@ -197,39 +192,42 @@ class _LoginState extends State<Login> {
                               ),
                             ),
                             const SizedBox(height: 18),
+
+                            // Form
                             Form(
                               key: _formKey,
                               child: Column(
                                 children: [
                                   TextFormField(
-                                    controller: _emailController,
-                                    keyboardType: TextInputType.emailAddress,
+                                    controller: _studentIdController,
+                                    keyboardType: TextInputType.text,
                                     decoration: const InputDecoration(
-                                      prefixIcon: Icon(Icons.email_outlined),
-                                      labelText: 'Email',
+                                      prefixIcon: Icon(Icons.badge_outlined),
+                                      labelText: 'Student ID',
+                                      hintText: '23-XXXX',
                                       border: OutlineInputBorder(),
                                     ),
                                     validator: (value) {
                                       if (value == null ||
                                           value.trim().isEmpty) {
-                                        return 'Please enter your email';
-                                      }
-                                      if (!value.contains('@')) {
-                                        return 'Please enter a valid email';
+                                        return 'Please enter your Student ID';
                                       }
                                       return null;
                                     },
                                     enabled: !isLoading,
                                   ),
                                   const SizedBox(height: 12),
+
+                                  // LRN
                                   TextFormField(
-                                    controller: _passwordController,
+                                    controller: _lrnController,
                                     obscureText: _obscurePassword,
+                                    keyboardType: TextInputType.number,
                                     decoration: InputDecoration(
                                       prefixIcon: const Icon(
                                         Icons.lock_outline,
                                       ),
-                                      labelText: 'Password',
+                                      labelText: 'LRN (Password)',
                                       border: const OutlineInputBorder(),
                                       suffixIcon: IconButton(
                                         icon: Icon(
@@ -245,16 +243,17 @@ class _LoginState extends State<Login> {
                                     ),
                                     validator: (value) {
                                       if (value == null || value.isEmpty) {
-                                        return 'Please enter your password';
+                                        return 'Please enter your LRN';
                                       }
                                       if (value.length < 6) {
-                                        return 'Password must be at least 6 characters';
+                                        return 'LRN must be at least 6 characters';
                                       }
                                       return null;
                                     },
                                     enabled: !isLoading,
                                   ),
                                   const SizedBox(height: 10),
+
                                   Row(
                                     children: [
                                       Checkbox(
@@ -271,6 +270,8 @@ class _LoginState extends State<Login> {
                               ),
                             ),
                             const SizedBox(height: 6),
+
+                            // Button
                             SizedBox(
                               height: 48,
                               child: ElevatedButton(

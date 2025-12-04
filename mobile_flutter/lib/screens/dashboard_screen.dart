@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../providers/dashboard_provider.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -13,6 +14,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    // Fetch fresh stats whenever dashboard opens
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<DashboardProvider>().loadDashboardData();
     });
@@ -20,91 +22,102 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Access the theme data defined in your AppTheme
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
 
+    // Listen to the provider
+    final provider = context.watch<DashboardProvider>();
+
     return Scaffold(
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Dashboard Summary Card
-            Card(
-              elevation: 2,
-              color: colorScheme.surfaceContainerLow,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: colorScheme.outlineVariant, width: 1),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'My Dashboard',
-                      style: textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onSurface,
+      body: RefreshIndicator(
+        onRefresh: () => provider.loadDashboardData(),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Dashboard Summary Card
+              Card(
+                elevation: 2,
+                color: colorScheme.surfaceContainerLow,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: colorScheme.outlineVariant, width: 1),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'My Dashboard',
+                        style: textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.onSurface,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        // FIXED: Wrapped in Expanded to prevent RenderFlex overflow
-                        Expanded(
-                          child: _buildStatCard(
-                            context,
-                            'My Events',
-                            '5',
-                            Icons.event_available,
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          Expanded(
+                            child: _buildStatCard(
+                              context,
+                              'Events',
+                              provider.eventsCount.toString(),
+                              Icons.event_available,
+                            ),
                           ),
-                        ),
-                        Expanded(
-                          child: _buildStatCard(
-                            context,
-                            'Attended',
-                            '3',
-                            Icons.check_circle,
+                          Expanded(
+                            child: _buildStatCard(
+                              context,
+                              'Joined',
+                              provider.participationsCount.toString(),
+                              Icons.check_circle,
+                            ),
                           ),
-                        ),
-                        Expanded(
-                          child: _buildStatCard(
-                            context,
-                            'Upcoming',
-                            '2',
-                            Icons.schedule,
+                          Expanded(
+                            child: _buildStatCard(
+                              context,
+                              'Scans',
+                              provider.scansCount.toString(),
+                              Icons.qr_code,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
 
-            // Section Header
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4.0),
-              child: Text(
+              // Section Header
+              Text(
                 'Upcoming Events',
                 style: textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: colorScheme.onSurface,
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
+              const SizedBox(height: 12),
 
-            // Events List
-            _buildUpcomingEvents(context),
-            const SizedBox(height: 24),
-          ],
+              // Events List
+              if (provider.isLoading)
+                const Center(child: CircularProgressIndicator())
+              else if (provider.recentEvents.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Center(child: Text("No upcoming events.")),
+                )
+              else
+                _buildUpcomingEvents(context, provider.recentEvents),
+
+              const SizedBox(height: 24),
+            ],
+          ),
         ),
       ),
     );
@@ -137,7 +150,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             color: colorScheme.primary,
           ),
         ),
-        // FIXED: Added overflow handling for smaller screens
         Text(
           title,
           maxLines: 1,
@@ -151,27 +163,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildUpcomingEvents(BuildContext context) {
+  Widget _buildUpcomingEvents(BuildContext context, List<dynamic> events) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    final placeholderEvents = [
-      {
-        'title': 'Tech Conference 2024',
-        'date': 'Dec 15, 2024',
-        'time': '10:00 AM - 4:00 PM',
-        'location': 'Main Auditorium',
-      },
-      {
-        'title': 'Career Fair',
-        'date': 'Dec 20, 2024',
-        'time': '9:00 AM - 3:00 PM',
-        'location': 'Student Center',
-      },
-    ];
-
     return Column(
-      children: placeholderEvents.map((event) {
+      children: events.map((event) {
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
           elevation: 0,
@@ -190,7 +187,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Icon(Icons.event, color: colorScheme.onSecondaryContainer),
             ),
             title: Text(
-              event['title']!,
+              event.title,
               style: textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -209,7 +206,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '${event['date']} • ${event['time']}',
+                        DateFormat('MMM d, yyyy').format(event.timeStart),
                         style: textTheme.bodySmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),
@@ -217,29 +214,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.location_on,
-                        size: 14,
-                        color: colorScheme.primary,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        event['location']!,
-                        style: textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
+                  if (event.location != null)
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.location_on,
+                          size: 14,
+                          color: colorScheme.primary,
                         ),
-                      ),
-                    ],
-                  ),
+                        const SizedBox(width: 4),
+                        Text(
+                          event.location!,
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
                 ],
               ),
-            ),
-            trailing: Icon(
-              Icons.arrow_forward_ios,
-              size: 16,
-              color: colorScheme.onSurfaceVariant,
             ),
           ),
         );
