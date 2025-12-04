@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 // import 'providers/user_provider.dart';
 import 'providers/event_provider.dart';
+import 'providers/dashboard_provider.dart';
 import 'auth/login.dart';
 import 'theme.dart';
 
@@ -19,6 +20,7 @@ class MainApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => DashboardProvider()),
         // ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (_) => EventProvider()),
         ChangeNotifierProvider(create: (_) => ParticipationProvider()),

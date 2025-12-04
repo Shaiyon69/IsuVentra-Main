@@ -20,7 +20,7 @@ class ParticipationProvider with ChangeNotifier {
       fetchHistory();
       return response['message'];
     } catch (e) {
-      throw e; // Rethrow to let UI handle "Already In" errors
+      rethrow;
     }
   }
 
@@ -33,7 +33,7 @@ class ParticipationProvider with ChangeNotifier {
       fetchHistory();
       return response['message'];
     } catch (e) {
-      throw e;
+      rethrow;
     }
   }
 

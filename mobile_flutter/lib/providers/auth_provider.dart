@@ -30,26 +30,27 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // LOGIN
+  // LOGIN - Simplified like Vue
   Future<bool> login(
-    String studentId,
-    String lrn, {
+    String identifier,
+    String password, {
     bool remember = false,
   }) async {
     _isLoading = true;
     notifyListeners();
 
     try {
+      // Single endpoint for both admin and student login
       final response = await _api.post('/login', {
-        'email': studentId,
-        'password': lrn,
+        'email': identifier, // Backend determines if it's email or student_id
+        'password': password,
       });
 
       await _storage.write(key: 'token', value: response['access_token']);
 
       if (remember) {
-        await _storage.write(key: 'saved_email', value: studentId);
-        _savedEmail = studentId;
+        await _storage.write(key: 'saved_email', value: identifier);
+        _savedEmail = identifier;
         _rememberMe = true;
       } else {
         await _storage.delete(key: 'saved_email');
