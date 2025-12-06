@@ -30,81 +30,9 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
 
         final code = qrCode.rawValue!;
         debugPrint('QR Code found: $code');
-        _showResultDialog(code);
         break;
       }
     }
-  }
-
-  void _showResultDialog(String code) {
-    cameraController.stop();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (context) {
-        final theme = Theme.of(context);
-        return Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Icon(
-                Icons.check_circle,
-                color: theme.colorScheme.primary,
-                size: 64,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'QR Code Detected',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                code,
-                style: theme.textTheme.bodyMedium,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    setState(() {
-                      _isProcessing = false;
-                    });
-                    cameraController.start();
-                  },
-                  child: const Text('Scan Another'),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    ).then((_) {
-      if (mounted && !_isProcessing) {
-        cameraController.start();
-      } else if (mounted) {
-        setState(() {
-          _isProcessing = false;
-        });
-        cameraController.start();
-      }
-    });
   }
 
   @override
@@ -157,7 +85,6 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                // FIXED: Updated to compatible with mobile_scanner 5.x
                 ValueListenableBuilder(
                   valueListenable: cameraController,
                   builder: (context, state, child) {
@@ -177,7 +104,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
                 Text(
                   'Align code in frame',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                     fontSize: 14,
                   ),
                 ),

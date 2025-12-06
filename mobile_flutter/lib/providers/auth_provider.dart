@@ -1,106 +1,107 @@
-import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../services/auth_service.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../services/api_service.dart';
+import '../models/user_model.dart';
 
-/// Consolidated AuthProvider that handles login/logout, token management,
-/// and optional "remember me" persistence.
-class AuthProvider extends ChangeNotifier {
-  final AuthService _authService = AuthService();
-  final ApiService _apiService = ApiService();
+class AuthProvider with ChangeNotifier {
+  final ApiService _api = ApiService();
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
+  User? _user;
   bool _isLoading = false;
-  String? _token;
-  Map<String, dynamic>? _currentUser;
-  String? savedEmail;
-  bool rememberMe = false;
+  String? _savedEmail;
+  bool _rememberMe = false;
 
+  User? get user => _user;
   bool get isLoading => _isLoading;
-  String? get token => _token;
-  Map<String, dynamic>? get currentUser => _currentUser;
+  bool get isAuthenticated => _user != null;
+
+  String? get savedEmail => _savedEmail;
+  bool get rememberMe => _rememberMe;
+  String? get token => null;
 
   AuthProvider() {
-    loadFromStorage();
+    _loadSavedEmail();
   }
 
-  Future<void> loadFromStorage() async {
-    final prefs = await SharedPreferences.getInstance();
-    savedEmail = prefs.getString('savedEmail');
-    _token = prefs.getString('savedToken');
-    rememberMe = prefs.getBool('rememberMe') ?? false;
-
-    if (_token != null && _token!.isNotEmpty) {
-      _apiService.setToken(_token!);
-    }
-
+  Future<void> _loadSavedEmail() async {
+    _savedEmail = await _storage.read(key: 'saved_email');
+    if (_savedEmail != null) _rememberMe = true;
     notifyListeners();
   }
 
+  // LOGIN - Simplified like Vue
   Future<bool> login(
-    String email,
+    String identifier,
     String password, {
-    required bool remember,
+    bool remember = false,
   }) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      final loginData = await _authService.login(email, password);
-      _isLoading = false;
+      // Single endpoint for both admin and student login
+      final response = await _api.post('/login', {
+        'email': identifier, // Backend determines if it's email or student_id
+        'password': password,
+      });
 
-      if (loginData != null && loginData['token'] != null) {
-        _token = loginData['token'];
-        _currentUser = loginData['user'];
-        savedEmail = email;
-        rememberMe = remember;
+      await _storage.write(key: 'token', value: response['access_token']);
 
-        _apiService.setToken(_token!);
-
-        final prefs = await SharedPreferences.getInstance();
-        if (remember) {
-          await prefs.setBool('rememberMe', true);
-          await prefs.setString('savedEmail', email);
-          await prefs.setString('savedToken', _token!);
-        } else {
-          await prefs.remove('rememberMe');
-          await prefs.remove('savedEmail');
-          await prefs.remove('savedToken');
-        }
-
-        notifyListeners();
-        return true;
+      if (remember) {
+        await _storage.write(key: 'saved_email', value: identifier);
+        _savedEmail = identifier;
+        _rememberMe = true;
+      } else {
+        await _storage.delete(key: 'saved_email');
+        _savedEmail = null;
+        _rememberMe = false;
       }
 
-      notifyListeners();
-      return false;
+      await fetchUserProfile();
+
+      return true;
     } catch (e) {
+      debugPrint("Login Error: $e");
+
+      return false;
+    } finally {
       _isLoading = false;
       notifyListeners();
-      return false;
     }
   }
 
-  Future<void> logout() async {
-    _token = null;
-    rememberMe = false;
-    savedEmail = null;
-    _apiService.clearToken();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('rememberMe');
-    await prefs.remove('savedEmail');
-    await prefs.remove('savedToken');
-    notifyListeners();
-  }
-
-  Future<void> refreshUser() async {
+  // FETCH USER PROFILE
+  Future<void> fetchUserProfile() async {
     try {
-      final userData = await _authService.getCurrentUser();
-      if (userData != null) {
-        _currentUser = userData;
-        notifyListeners();
-      }
+      final data = await _api.get('/user');
+      _user = User.fromJson(data);
+      notifyListeners();
     } catch (e) {
-      debugPrint('Error refreshing user: $e');
+      debugPrint("Profile Error: $e");
     }
+  }
+
+  // AUTO-LOGIN CHECK
+  Future<bool> tryAutoLogin() async {
+    final token = await _storage.read(key: 'token');
+    if (token == null) return false;
+
+    try {
+      await fetchUserProfile();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // LOGOUT
+  Future<void> logout() async {
+    try {
+      await _api.post('/logout', {});
+    } catch (_) {}
+    await _storage.delete(key: 'token');
+    _user = null;
+    notifyListeners();
   }
 }

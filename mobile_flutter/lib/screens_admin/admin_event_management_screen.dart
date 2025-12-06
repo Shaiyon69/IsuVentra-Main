@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/event_provider.dart';
-import 'qr_scanner_screen.dart';
+import '../screens/qr_scanner_screen.dart';
 
 class EventListScreen extends StatefulWidget {
   const EventListScreen({super.key});

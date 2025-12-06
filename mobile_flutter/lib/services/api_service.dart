@@ -1,85 +1,88 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../variables.dart';
 
 class ApiService {
-  static final ApiService _instance = ApiService._internal();
-  factory ApiService() => _instance;
-  ApiService._internal();
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
-  String? _token;
-
-  void setToken(String token) {
-    _token = token;
-  }
-
-  String? getToken() {
-    return _token;
-  }
-
-  void clearToken() {
-    _token = null;
-  }
-
-  bool get isAuthenticated => _token != null && _token!.isNotEmpty;
-
-  Future<http.Response> get(String endpoint) async {
-    return await http.get(
-      Uri.parse('$baseUrl$endpoint'),
-      headers: _buildHeaders(),
-    );
-  }
-
-  Future<http.Response> post(String endpoint, Map<String, dynamic> data) async {
-    return await http.post(
-      Uri.parse('$baseUrl$endpoint'),
-      headers: _buildHeaders(),
-      body: jsonEncode(data),
-    );
-  }
-
-  Future<http.Response> put(String endpoint, Map<String, dynamic> data) async {
-    return await http.put(
-      Uri.parse('$baseUrl$endpoint'),
-      headers: _buildHeaders(),
-      body: jsonEncode(data),
-    );
-  }
-
-  Future<http.Response> delete(String endpoint) async {
-    return await http.delete(
-      Uri.parse('$baseUrl$endpoint'),
-      headers: _buildHeaders(),
-    );
-  }
-
-  Map<String, String> _buildHeaders() {
+  Future<Map<String, String>> _getHeaders() async {
+    String? token = await _storage.read(key: 'token');
     return {
-      'Accept': 'application/json',
       'Content-Type': 'application/json',
-      if (_token != null) 'Authorization': 'Bearer $_token',
+      'Accept': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
     };
   }
 
-  static Future<http.Response> staticGet(String endpoint) async {
-    return _instance.get(endpoint);
+  // --- GENERIC HTTP METHODS ---
+
+  // GET Request (e.g., Fetch Events, History)
+  Future<dynamic> get(String endpoint) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: await _getHeaders(),
+      );
+      return _processResponse(response);
+    } catch (e) {
+      throw Exception('Connection Error: $e');
+    }
   }
 
-  static Future<http.Response> staticPost(
-    String endpoint,
-    Map<String, dynamic> data,
-  ) async {
-    return _instance.post(endpoint, data);
+  // POST Request (e.g., Login, Scan QR)
+  Future<dynamic> post(String endpoint, Map<String, dynamic> data) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: await _getHeaders(),
+        body: jsonEncode(data),
+      );
+      return _processResponse(response);
+    } catch (e) {
+      throw Exception('Connection Error: $e');
+    }
   }
 
-  static Future<http.Response> staticPut(
-    String endpoint,
-    Map<String, dynamic> data,
-  ) async {
-    return _instance.put(endpoint, data);
+  // PUT Request (e.g., Update Profile)
+  Future<dynamic> put(String endpoint, Map<String, dynamic> data) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: await _getHeaders(),
+        body: jsonEncode(data),
+      );
+      return _processResponse(response);
+    } catch (e) {
+      throw Exception('Connection Error: $e');
+    }
   }
 
-  static Future<http.Response> staticDelete(String endpoint) async {
-    return _instance.delete(endpoint);
+  // DELETE Request
+  Future<dynamic> delete(String endpoint) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: await _getHeaders(),
+      );
+      return _processResponse(response);
+    } catch (e) {
+      throw Exception('Connection Error: $e');
+    }
+  }
+
+  // --- RESPONSE HANDLER ---
+  dynamic _processResponse(http.Response response) {
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (response.body.isEmpty) return null;
+      return jsonDecode(response.body);
+    } else {
+      try {
+        final errorData = jsonDecode(response.body);
+        throw Exception(errorData['message'] ?? 'Unknown Error Occurred');
+      } catch (_) {
+        throw Exception('Server Error: ${response.statusCode}');
+      }
+    }
   }
 }
