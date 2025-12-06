@@ -49,8 +49,12 @@ class _AdminQRScannerScreenState extends State<AdminQRScannerScreen> {
 
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Participation recorded successfully!'),
+              SnackBar(
+                content: Text(
+                  'Attendance recorded for ${widget.event!.title}!',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                backgroundColor: Theme.of(context).colorScheme.primary,
               ),
             );
             Navigator.pop(context);
@@ -59,10 +63,12 @@ class _AdminQRScannerScreenState extends State<AdminQRScannerScreen> {
           debugPrint('Error processing QR code: $e');
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
+              SnackBar(
+                content: const Text(
                   'Invalid QR code or error recording participation',
+                  style: TextStyle(fontWeight: FontWeight.w600),
                 ),
+                backgroundColor: Theme.of(context).colorScheme.error,
               ),
             );
             setState(() {
@@ -77,6 +83,8 @@ class _AdminQRScannerScreenState extends State<AdminQRScannerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
       body: Stack(
         children: [
@@ -89,29 +97,30 @@ class _AdminQRScannerScreenState extends State<AdminQRScannerScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                IconButton.filledTonal(
+                IconButton.filled(
                   icon: const Icon(Icons.arrow_back),
                   onPressed: () => Navigator.pop(context),
                   style: IconButton.styleFrom(
-                    backgroundColor: Colors.black54,
-                    foregroundColor: Colors.white,
+                    backgroundColor: colorScheme.surface.withOpacity(0.5),
+                    foregroundColor: colorScheme.onSurface,
                   ),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
-                    vertical: 8,
+                    vertical: 10,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.black54,
+                    color: colorScheme.surface.withOpacity(0.5),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Text(
-                    'Scan Student QR',
+                  child: Text(
+                    'Scan for: ${widget.event?.title ?? 'Event'}',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: colorScheme.onSurface,
                       fontWeight: FontWeight.w600,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 const SizedBox(width: 48),
@@ -132,8 +141,12 @@ class _AdminQRScannerScreenState extends State<AdminQRScannerScreen> {
                     return IconButton.filled(
                       onPressed: () => cameraController.toggleTorch(),
                       style: IconButton.styleFrom(
-                        backgroundColor: isAuth ? Colors.white : Colors.black54,
-                        foregroundColor: isAuth ? Colors.black : Colors.white,
+                        backgroundColor: isAuth
+                            ? colorScheme.primary
+                            : colorScheme.surface.withOpacity(0.5),
+                        foregroundColor: isAuth
+                            ? colorScheme.onPrimary
+                            : colorScheme.onSurface,
                         padding: const EdgeInsets.all(16),
                       ),
                       iconSize: 28,
@@ -141,18 +154,29 @@ class _AdminQRScannerScreenState extends State<AdminQRScannerScreen> {
                     );
                   },
                 ),
-                Text(
-                  'Align code in frame',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.8),
-                    fontSize: 14,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surface.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    _isProcessing ? 'Processing...' : 'Align code in frame',
+                    style: TextStyle(
+                      color: colorScheme.onSurface,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
                 IconButton.filled(
                   onPressed: () => cameraController.switchCamera(),
                   style: IconButton.styleFrom(
-                    backgroundColor: Colors.black54,
-                    foregroundColor: Colors.white,
+                    backgroundColor: colorScheme.surface.withOpacity(0.5),
+                    foregroundColor: colorScheme.onSurface,
                     padding: const EdgeInsets.all(16),
                   ),
                   iconSize: 28,
@@ -173,7 +197,10 @@ class _ScannerOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ColorFiltered(
-      colorFilter: const ColorFilter.mode(Colors.black54, BlendMode.srcOut),
+      colorFilter: ColorFilter.mode(
+        Theme.of(context).colorScheme.scrim.withOpacity(0.5),
+        BlendMode.srcOut,
+      ),
       child: Stack(
         children: [
           Container(

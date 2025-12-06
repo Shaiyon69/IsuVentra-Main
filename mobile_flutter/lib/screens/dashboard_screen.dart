@@ -14,7 +14,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    // Fetch fresh stats whenever dashboard opens
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<DashboardProvider>().loadDashboardData();
     });
@@ -25,8 +24,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
-
-    // Listen to the provider
     final provider = context.watch<DashboardProvider>();
 
     return Scaffold(
@@ -38,23 +35,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Dashboard Summary Card
               Card(
-                elevation: 2,
-                color: colorScheme.surfaceContainerLow,
+                elevation: 0,
+                color: colorScheme.surfaceContainerHigh,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(color: colorScheme.outlineVariant, width: 1),
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(20.0),
+                  padding: const EdgeInsets.all(24.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'My Dashboard',
-                        style: textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
+                        'My Summary',
+                        style: textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
                           color: colorScheme.onSurface,
                         ),
                       ),
@@ -68,6 +63,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               'Events',
                               provider.eventsCount.toString(),
                               Icons.event_available,
+                              colorScheme.primary,
                             ),
                           ),
                           Expanded(
@@ -76,6 +72,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               'Joined',
                               provider.participationsCount.toString(),
                               Icons.check_circle,
+                              colorScheme.tertiary,
                             ),
                           ),
                           Expanded(
@@ -84,6 +81,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               'Scans',
                               provider.scansCount.toString(),
                               Icons.qr_code,
+                              colorScheme.secondary,
                             ),
                           ),
                         ],
@@ -92,25 +90,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 32),
 
-              // Section Header
               Text(
                 'Upcoming Events',
                 style: textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                   color: colorScheme.onSurface,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
 
-              // Events List
               if (provider.isLoading)
-                const Center(child: CircularProgressIndicator())
+                Center(
+                  child: CircularProgressIndicator(color: colorScheme.primary),
+                )
               else if (provider.recentEvents.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Center(child: Text("No upcoming events.")),
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Center(
+                    child: Text(
+                      "No upcoming events.",
+                      style: textTheme.bodyLarge?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
                 )
               else
                 _buildUpcomingEvents(context, provider.recentEvents),
@@ -128,6 +133,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     String title,
     String value,
     IconData icon,
+    Color iconColor,
   ) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -135,19 +141,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: colorScheme.primaryContainer,
+            color: iconColor.withOpacity(0.12),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, size: 32, color: colorScheme.onPrimaryContainer),
+          child: Icon(icon, size: 30, color: iconColor),
         ),
         const SizedBox(height: 12),
         Text(
           value,
           style: theme.textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: colorScheme.primary,
+            fontWeight: FontWeight.w900,
+            color: colorScheme.onSurface,
           ),
         ),
         Text(
@@ -171,26 +177,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
       children: events.map((event) {
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
-          elevation: 0,
+          elevation: 2,
           color: colorScheme.surface,
           shape: RoundedRectangleBorder(
-            side: BorderSide(color: colorScheme.outlineVariant),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
           ),
           child: ListTile(
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 8,
             ),
-            leading: CircleAvatar(
-              backgroundColor: colorScheme.secondaryContainer,
-              child: Icon(Icons.event, color: colorScheme.onSecondaryContainer),
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: colorScheme.secondaryContainer,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                Icons.event,
+                color: colorScheme.onSecondaryContainer,
+                size: 24,
+              ),
             ),
             title: Text(
               event.title,
               style: textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w600,
+                color: colorScheme.onSurface,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
             subtitle: Padding(
               padding: const EdgeInsets.only(top: 6.0),
@@ -202,12 +218,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       Icon(
                         Icons.calendar_today,
                         size: 14,
-                        color: colorScheme.primary,
+                        color: colorScheme.secondary,
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 6),
                       Text(
                         DateFormat('MMM d, yyyy').format(event.timeStart),
-                        style: textTheme.bodySmall?.copyWith(
+                        style: textTheme.bodyMedium?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),
                       ),
@@ -220,20 +236,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Icon(
                           Icons.location_on,
                           size: 14,
-                          color: colorScheme.primary,
+                          color: colorScheme.secondary,
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 6),
                         Text(
                           event.location!,
-                          style: textTheme.bodySmall?.copyWith(
+                          style: textTheme.bodyMedium?.copyWith(
                             color: colorScheme.onSurfaceVariant,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
                 ],
               ),
             ),
+            trailing: Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: colorScheme.outline,
+            ),
+            onTap: () {
+              // TODO: Navigate to Event Details Screen
+            },
           ),
         );
       }).toList(),

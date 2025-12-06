@@ -66,12 +66,19 @@ class _AdminEventManagementScreenState
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Search events...',
-                prefixIcon: const Icon(Icons.search),
+                prefixIcon: Icon(
+                  Icons.search,
+                  color: colorScheme.onSurfaceVariant,
+                ),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 filled: true,
-                fillColor: colorScheme.surface,
+                fillColor: colorScheme.surfaceContainerLow,
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 10,
+                  horizontal: 16,
+                ),
               ),
               onChanged: (value) {
                 setState(() {
@@ -136,7 +143,9 @@ class _AdminEventManagementScreenState
               ),
               const SizedBox(height: 8),
               Text(
-                'Tap the "New Event" button below to get started.',
+                _searchQuery.isEmpty
+                    ? 'Tap the "New Event" button to get started.'
+                    : 'No events found for "$_searchQuery".',
                 textAlign: TextAlign.center,
                 style: textTheme.bodyMedium,
               ),
@@ -171,10 +180,8 @@ class _AdminEventManagementScreenState
 
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: colorScheme.outlineVariant, width: 0.5),
-      ),
+      color: colorScheme.surfaceContainerHigh,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -190,6 +197,8 @@ class _AdminEventManagementScreenState
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 8),
+
+            // Time and Date Row
             Row(
               children: [
                 Icon(Icons.calendar_month, size: 18, color: statusColor),
@@ -213,6 +222,8 @@ class _AdminEventManagementScreenState
                 ),
               ],
             ),
+
+            // Location Row
             if (event.location != null) ...[
               const SizedBox(height: 4),
               Row(
@@ -234,6 +245,7 @@ class _AdminEventManagementScreenState
               ),
             ],
             const SizedBox(height: 16),
+
             if (event.description != null)
               Text(
                 event.description!,
@@ -243,7 +255,9 @@ class _AdminEventManagementScreenState
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
+
+            // Action Button (Primary action for Admin is Scanning)
             SizedBox(
               width: double.infinity,
               child: FilledButton(
@@ -255,12 +269,20 @@ class _AdminEventManagementScreenState
                     ),
                   );
                 },
+                style: FilledButton.styleFrom(
+                  backgroundColor: colorScheme.primary,
+                  foregroundColor: colorScheme.onPrimary,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(Icons.qr_code_scanner, size: 20),
                     SizedBox(width: 8),
-                    Text('Start Scanning Attendance'),
+                    Text(
+                      'Scan Attendance',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
                   ],
                 ),
               ),

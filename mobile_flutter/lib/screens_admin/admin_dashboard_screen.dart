@@ -24,6 +24,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final provider = context.watch<DashboardProvider>();
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
 
     return Scaffold(
       body: RefreshIndicator(
@@ -35,8 +36,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Dashboard',
-                style: theme.textTheme.titleLarge?.copyWith(
+                'Dashboard Overview',
+                style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: colorScheme.onSurface,
                 ),
@@ -45,35 +46,32 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
               GridView.count(
                 crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                childAspectRatio: 1.1,
+                childAspectRatio: 1.2,
                 children: [
                   _buildAdminStat(
                     theme,
                     'Total Events',
                     '${provider.eventsCount}',
                     Icons.event_note,
-                    Colors.blue.shade600,
-                    colorScheme.primaryContainer,
+                    colorScheme.primary,
                   ),
                   _buildAdminStat(
                     theme,
                     'Total Participations',
                     '${provider.participationsCount}',
                     Icons.group_add,
-                    Colors.orange.shade600,
-                    Colors.orange.shade100,
+                    colorScheme.tertiary,
                   ),
                   _buildAdminStat(
                     theme,
                     'Active Scans Today',
                     '${provider.scansCount}',
                     Icons.qr_code_scanner,
-                    Colors.green.shade600,
-                    Colors.green.shade100,
+                    colorScheme.secondary,
                   ),
                   _buildAdminStat(
                     theme,
@@ -81,7 +79,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     '${_getUpcomingEventsCount(provider.recentEvents)}',
                     Icons.calendar_today,
                     Colors.purple.shade600,
-                    Colors.purple.shade100,
                   ),
                 ],
               ),
@@ -93,7 +90,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 children: [
                   Text(
                     'Recent Events',
-                    style: theme.textTheme.titleLarge?.copyWith(
+                    style: textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: colorScheme.onSurface,
                     ),
@@ -124,7 +121,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
               Text(
                 'Participation Summary',
-                style: theme.textTheme.titleLarge?.copyWith(
+                style: textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: colorScheme.onSurface,
                 ),
@@ -145,11 +142,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     String value,
     IconData icon,
     Color iconColor,
-    Color cardColor,
   ) {
+    final colorScheme = theme.colorScheme;
     return Card(
       elevation: 4,
-      color: cardColor,
+      color: colorScheme.surfaceContainerHigh,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -157,22 +154,28 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Icon(icon, color: iconColor, size: 30),
-
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: iconColor.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: iconColor, size: 28),
+            ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   value,
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.onSurface,
+                  style: theme.textTheme.headlineLarge?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    color: colorScheme.onSurface,
                   ),
                 ),
                 Text(
                   title,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.w500,
                   ),
                   overflow: TextOverflow.ellipsis,
@@ -187,6 +190,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildEventCard(ThemeData theme, Event event) {
+    final colorScheme = theme.colorScheme;
     final formattedDate =
         '${event.timeStart.day}/${event.timeStart.month}/${event.timeStart.year}';
     final formattedTime =
@@ -194,15 +198,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
-      elevation: 2,
+      elevation: 1,
+      color: colorScheme.surfaceContainerLow,
       child: Padding(
         padding: const EdgeInsets.all(12.0),
         child: Row(
           children: [
-            Icon(
-              event.location != null ? Icons.location_on : Icons.event,
-              color: theme.colorScheme.primary,
-              size: 28,
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                event.location != null ? Icons.location_on : Icons.event,
+                color: colorScheme.onPrimaryContainer,
+                size: 24,
+              ),
             ),
             const SizedBox(width: 12),
 
@@ -222,7 +234,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   Text(
                     '$formattedDate at $formattedTime',
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+                      color: colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -233,13 +245,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.secondaryContainer,
+                  color: colorScheme.tertiaryContainer,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   'Upcoming',
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSecondaryContainer,
+                    color: colorScheme.onTertiaryContainer,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -251,16 +263,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildParticipationInfoCard(ThemeData theme, int participationCount) {
+    final colorScheme = theme.colorScheme;
     return Card(
       elevation: 4,
-      color: theme.colorScheme.surfaceContainerHighest,
+      color: colorScheme.secondaryContainer,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
             Icon(
               Icons.bar_chart_sharp,
-              color: theme.colorScheme.primary,
+              color: colorScheme.onSecondaryContainer,
               size: 36,
             ),
             const SizedBox(width: 16),
@@ -270,23 +283,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 children: [
                   Text(
                     'Total Participants: $participationCount',
-                    style: theme.textTheme.headlineSmall?.copyWith(
+                    style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.onSurface,
+                      color: colorScheme.onSecondaryContainer,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'Review detailed attendance logs and analytics here.',
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+                      color: colorScheme.onSecondaryContainer.withOpacity(0.9),
                     ),
                   ),
                 ],
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(Icons.arrow_forward_ios, size: 16),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: colorScheme.onSecondaryContainer,
+            ),
           ],
         ),
       ),
@@ -299,18 +316,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     required String title,
     required String subtitle,
   }) {
+    final colorScheme = theme.colorScheme;
     return Card(
+      elevation: 0,
+      color: colorScheme.surfaceContainerLow,
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 40, color: theme.colorScheme.outline),
-            const SizedBox(height: 8),
+            Icon(icon, size: 50, color: colorScheme.outline),
+            const SizedBox(height: 12),
             Text(
               title,
-              style: theme.textTheme.titleMedium?.copyWith(
+              style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),

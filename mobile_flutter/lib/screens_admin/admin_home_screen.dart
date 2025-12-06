@@ -20,20 +20,36 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'ADMIN PORTAL',
-          style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2),
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.5,
+            color: colorScheme.primary,
+          ),
         ),
+        elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.account_circle),
+            icon: CircleAvatar(
+              radius: 18,
+              backgroundColor: colorScheme.secondaryContainer,
+              child: Icon(
+                Icons.person,
+                size: 20,
+                color: colorScheme.onSecondaryContainer,
+              ),
+            ),
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const ProfileScreen()),
             ),
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: _screens[_selectedIndex],
@@ -41,6 +57,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) =>
             setState(() => _selectedIndex = index),
+        elevation: 4,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.analytics_outlined),

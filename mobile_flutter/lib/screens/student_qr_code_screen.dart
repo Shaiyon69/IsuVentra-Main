@@ -25,45 +25,51 @@ class StudentQRCodeScreen extends StatelessWidget {
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
+            Text(
               "Show this QR code to participate in events",
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16),
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
 
-            // Student Info
             Card(
-              elevation: 2,
-              color: colorScheme.surfaceContainerLow,
+              elevation: 0,
+              color: colorScheme.primaryContainer.withOpacity(0.5),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(20.0),
                 child: Column(
                   children: [
                     Text(
                       user.name,
-                      style: theme.textTheme.titleLarge?.copyWith(
+                      style: theme.textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
+                        color: colorScheme.onPrimaryContainer,
                       ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
                     Text(
                       "Student ID: ${user.studentId}",
-                      style: theme.textTheme.bodyLarge,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: colorScheme.onPrimaryContainer,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                     if (user.course != null) ...[
                       const SizedBox(height: 4),
                       Text(
                         user.course!,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: colorScheme.onPrimaryContainer.withOpacity(
+                            0.8,
+                          ),
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -73,22 +79,55 @@ class StudentQRCodeScreen extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 40),
+            const SizedBox(height: 20),
 
-            // QR Code Display
             Expanded(
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    QrImageView(
-                      data: user.studentId!,
-                      version: QrVersions.auto,
-                      size: 250.0,
-                      backgroundColor: Colors.white,
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: colorScheme.shadow.withOpacity(0.2),
+                            blurRadius: 15,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: QrImageView(
+                        data: user.studentId!,
+                        version: QrVersions.auto,
+                        size: 250.0,
+                        eyeStyle: QrEyeStyle(
+                          eyeShape: QrEyeShape.square,
+                          color: colorScheme.primary,
+                        ),
+                        dataModuleStyle: QrDataModuleStyle(
+                          dataModuleShape: QrDataModuleShape.square,
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 24),
-                    const Chip(label: Text("Scan to Participate")),
+                    const SizedBox(height: 16),
+                    Chip(
+                      label: const Text(
+                        "Ready to Scan",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      backgroundColor: colorScheme.secondaryContainer,
+                      labelStyle: TextStyle(
+                        color: colorScheme.onSecondaryContainer,
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                    ),
                   ],
                 ),
               ),

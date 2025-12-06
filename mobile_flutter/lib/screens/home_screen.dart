@@ -38,11 +38,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'ISUVENTRA',
-          style: TextStyle(fontWeight: FontWeight.w600, letterSpacing: 1.2),
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.5,
+            color: colorScheme.primary,
+          ),
         ),
         centerTitle: false,
+        elevation: 0,
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
@@ -73,6 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: _onItemTapped,
+        elevation: 4,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),

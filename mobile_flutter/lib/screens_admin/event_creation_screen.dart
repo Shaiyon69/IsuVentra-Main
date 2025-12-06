@@ -117,7 +117,10 @@ class _EventCreationScreenState extends State<EventCreationScreen> {
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to create event: ${e.toString()}')),
+        SnackBar(
+          content: Text('Failed to create event: ${e.toString()}'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
       );
     } finally {
       if (mounted) {
@@ -132,6 +135,7 @@ class _EventCreationScreenState extends State<EventCreationScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -141,16 +145,19 @@ class _EventCreationScreenState extends State<EventCreationScreen> {
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(24.0),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               TextFormField(
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Event Title',
-                  prefixIcon: Icon(Icons.event_note),
+                  prefixIcon: Icon(
+                    Icons.event_note,
+                    color: colorScheme.primary,
+                  ),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -165,9 +172,12 @@ class _EventCreationScreenState extends State<EventCreationScreen> {
               const SizedBox(height: 16),
 
               TextFormField(
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Location (e.g., Auditorium B)',
-                  prefixIcon: Icon(Icons.location_on_outlined),
+                  prefixIcon: Icon(
+                    Icons.location_on_outlined,
+                    color: colorScheme.secondary,
+                  ),
                 ),
                 onSaved: (value) {
                   _location = value;
@@ -176,25 +186,28 @@ class _EventCreationScreenState extends State<EventCreationScreen> {
               const SizedBox(height: 16),
 
               TextFormField(
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Description (Optional)',
-                  prefixIcon: Icon(Icons.description),
+                  prefixIcon: Icon(
+                    Icons.description,
+                    color: colorScheme.tertiary,
+                  ),
                 ),
                 maxLines: 3,
                 onSaved: (value) {
                   _description = value;
                 },
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 32),
 
               Text(
                 'Event Schedule',
-                style: theme.textTheme.titleMedium?.copyWith(
+                style: textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: colorScheme.primary,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
 
               _buildDateTimePicker(
                 context,
@@ -203,7 +216,7 @@ class _EventCreationScreenState extends State<EventCreationScreen> {
                 _timeStart,
                 () => _pickDateTime(true),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
 
               _buildDateTimePicker(
                 context,
@@ -212,11 +225,11 @@ class _EventCreationScreenState extends State<EventCreationScreen> {
                 _timeEnd,
                 () => _pickDateTime(false),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 40),
 
               SizedBox(
                 width: double.infinity,
-                height: 50,
+                height: 56,
                 child: FilledButton.icon(
                   onPressed: _isSaving ? null : _submitForm,
                   icon: _isSaving
@@ -229,7 +242,13 @@ class _EventCreationScreenState extends State<EventCreationScreen> {
                           ),
                         )
                       : const Icon(Icons.check_circle),
-                  label: Text(_isSaving ? 'Creating Event...' : 'Create Event'),
+                  label: Text(
+                    _isSaving ? 'Creating Event...' : 'Create Event',
+                    style: textTheme.titleMedium?.copyWith(
+                      color: colorScheme.onPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -246,17 +265,28 @@ class _EventCreationScreenState extends State<EventCreationScreen> {
     DateTime dateTime,
     VoidCallback onPressed,
   ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return InkWell(
       onTap: onPressed,
       child: InputDecorator(
         decoration: InputDecoration(
           labelText: label,
-          prefixIcon: Icon(icon, color: Theme.of(context).colorScheme.primary),
-          border: const OutlineInputBorder(),
+          prefixIcon: Icon(icon, color: colorScheme.primary),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: colorScheme.outline),
+          ),
+          filled: true,
+          fillColor: colorScheme.surfaceContainerLow,
         ),
         child: Text(
           DateFormat('EEEE, MMM d, yyyy \n(h:mm a)').format(dateTime),
-          style: Theme.of(context).textTheme.titleMedium,
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: colorScheme.onSurface,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ),
     );

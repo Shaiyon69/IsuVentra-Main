@@ -82,12 +82,19 @@ class _EventListScreenState extends State<EventListScreen> {
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Search events...',
-                prefixIcon: const Icon(Icons.search),
+                prefixIcon: Icon(
+                  Icons.search,
+                  color: colorScheme.onSurfaceVariant,
+                ),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 filled: true,
-                fillColor: colorScheme.surface,
+                fillColor: colorScheme.surfaceContainerLow,
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 10,
+                  horizontal: 16,
+                ),
               ),
               onChanged: (value) {
                 setState(() {
@@ -97,56 +104,36 @@ class _EventListScreenState extends State<EventListScreen> {
             ),
           ),
           Expanded(
-            child: provider.isLoading
-                ? Center(
-                    child: CircularProgressIndicator(
-                      color: colorScheme.primary,
-                    ),
-                  )
-                : provider.errorMessage != null
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: 48,
-                          color: colorScheme.error,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(provider.errorMessage!),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () => provider.fetchEvents(),
-                          child: const Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  )
-                : filteredEvents.isEmpty
+            child: filteredEvents.isEmpty
                 ? Center(
                     child: Text(
                       _searchQuery.isEmpty
                           ? 'No events available'
-                          : 'No events found',
+                          : 'No events found for "$_searchQuery"',
+                      style: textTheme.titleMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
                   )
                 : RefreshIndicator(
                     onRefresh: () => provider.fetchEvents(),
                     child: ListView.separated(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       itemCount: filteredEvents.length,
                       separatorBuilder: (context, index) =>
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 16),
                       itemBuilder: (context, index) {
                         final event = filteredEvents[index];
 
                         return Card(
-                          elevation: 0,
+                          elevation: 2,
                           color: colorScheme.surface,
                           shape: RoundedRectangleBorder(
-                            side: BorderSide(color: colorScheme.outlineVariant),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(16),
                           ),
                           child: Padding(
                             padding: const EdgeInsets.all(16),
@@ -156,10 +143,12 @@ class _EventListScreenState extends State<EventListScreen> {
                                 Text(
                                   event.title,
                                   style: textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w700,
+                                    color: colorScheme.onSurface,
                                   ),
                                 ),
                                 const SizedBox(height: 8),
+
                                 if (event.description != null)
                                   Text(
                                     event.description!,
@@ -170,45 +159,56 @@ class _EventListScreenState extends State<EventListScreen> {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 const SizedBox(height: 16),
+
                                 Row(
                                   children: [
                                     Icon(
-                                      Icons.access_time,
+                                      Icons.schedule,
                                       size: 18,
-                                      color: colorScheme.primary,
+                                      color: colorScheme.secondary,
                                     ),
                                     const SizedBox(width: 8),
                                     Text(
                                       "${DateFormat('MMM d, h:mm a').format(event.timeStart)} - ${DateFormat('h:mm a').format(event.timeEnd)}",
-                                      style: textTheme.bodyMedium,
+                                      style: textTheme.bodyMedium?.copyWith(
+                                        color: colorScheme.onSurface,
+                                      ),
                                     ),
                                   ],
                                 ),
                                 const SizedBox(height: 8),
+
                                 if (event.location != null)
                                   Row(
                                     children: [
                                       Icon(
                                         Icons.location_on_outlined,
                                         size: 18,
-                                        color: colorScheme.primary,
+                                        color: colorScheme.secondary,
                                       ),
                                       const SizedBox(width: 8),
-                                      Text(
-                                        event.location!,
-                                        style: textTheme.bodyMedium,
+                                      Expanded(
+                                        child: Text(
+                                          event.location!,
+                                          style: textTheme.bodyMedium?.copyWith(
+                                            color: colorScheme.onSurface,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ),
                                     ],
                                   ),
-                                const SizedBox(height: 16),
+                                const SizedBox(height: 20),
+
                                 SizedBox(
                                   width: double.infinity,
                                   child: FilledButton(
                                     style: FilledButton.styleFrom(
-                                      backgroundColor:
-                                          colorScheme.secondaryContainer,
-                                      foregroundColor:
-                                          colorScheme.onSecondaryContainer,
+                                      backgroundColor: colorScheme.primary,
+                                      foregroundColor: colorScheme.onPrimary,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 14,
+                                      ),
                                     ),
                                     onPressed: () {
                                       widget.onSwitchToQR?.call();
@@ -219,7 +219,12 @@ class _EventListScreenState extends State<EventListScreen> {
                                       children: [
                                         Icon(Icons.qr_code, size: 20),
                                         SizedBox(width: 8),
-                                        Text('Participate'),
+                                        Text(
+                                          'Participate',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ),
