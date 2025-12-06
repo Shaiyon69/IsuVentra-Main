@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:qr_flutter/qr_flutter.dart'; // REQUIRES: qr_flutter in pubspec.yaml
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:provider/provider.dart';
 import '../providers/event_provider.dart';
 import '../models/event_model.dart';
 
 class QRGeneratorScreen extends StatefulWidget {
-  const QRGeneratorScreen({super.key});
+  final Event? initialEvent;
+
+  const QRGeneratorScreen({super.key, this.initialEvent});
 
   @override
   State<QRGeneratorScreen> createState() => _QRGeneratorScreenState();
@@ -15,11 +17,30 @@ class _QRGeneratorScreenState extends State<QRGeneratorScreen> {
   Event? selectedEvent;
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.initialEvent != null) {
+      selectedEvent = widget.initialEvent;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final provider = context.watch<EventProvider>();
     final theme = Theme.of(context);
 
+    if (selectedEvent != null && provider.events.isNotEmpty) {
+      try {
+        selectedEvent = provider.events.firstWhere(
+          (e) => e.id == selectedEvent!.id,
+        );
+      } catch (e) {
+        selectedEvent = null;
+      }
+    }
+
     return Scaffold(
+      appBar: AppBar(title: const Text("QR Code Generator")),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
@@ -32,13 +53,12 @@ class _QRGeneratorScreenState extends State<QRGeneratorScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Dropdown to select event
             DropdownButtonFormField<Event>(
               decoration: const InputDecoration(
                 labelText: 'Select Event',
                 border: OutlineInputBorder(),
               ),
-              value: selectedEvent,
+              initialValue: selectedEvent,
               items: provider.events.map((event) {
                 return DropdownMenuItem(
                   value: event,
@@ -74,8 +94,7 @@ class _QRGeneratorScreenState extends State<QRGeneratorScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           QrImageView(
-                            data: selectedEvent!.id
-                                .toString(), // The data hidden in the QR
+                            data: selectedEvent!.id.toString(),
                             version: QrVersions.auto,
                             size: 250.0,
                             backgroundColor: Colors.white,
@@ -86,6 +105,7 @@ class _QRGeneratorScreenState extends State<QRGeneratorScreen> {
                             style: theme.textTheme.headlineSmall?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
+                            textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 8),
                           const Chip(label: Text("Scan to Check-in")),

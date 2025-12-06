@@ -44,48 +44,6 @@ class ProfileScreen extends StatelessWidget {
                     _buildInfoCard(context, Icons.email, 'Email', user.email),
                     const SizedBox(height: 24),
 
-                    const Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Student Information',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-
-                    _buildInfoCard(
-                      context,
-                      Icons.badge,
-                      'Student ID',
-                      user.studentId ?? 'N/A',
-                    ),
-                    const SizedBox(height: 12),
-                    _buildInfoCard(
-                      context,
-                      Icons.school,
-                      'Course',
-                      user.course ?? 'N/A',
-                    ),
-                    const SizedBox(height: 12),
-                    _buildInfoCard(
-                      context,
-                      Icons.grade,
-                      'Year Level',
-                      user.yearLevel ?? 'N/A',
-                    ),
-                    const SizedBox(height: 12),
-                    _buildInfoCard(
-                      context,
-                      Icons.location_on,
-                      'Campus',
-                      user.department ?? 'N/A',
-                    ),
-
-                    const SizedBox(height: 32),
-
                     ElevatedButton.icon(
                       onPressed: () async {
                         await auth.logout();

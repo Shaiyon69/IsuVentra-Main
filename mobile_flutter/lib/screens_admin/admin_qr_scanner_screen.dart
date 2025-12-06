@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:provider/provider.dart';
+import '../models/event_model.dart';
+import '../providers/participation_provider.dart';
 
-class QRScannerScreen extends StatefulWidget {
-  const QRScannerScreen({super.key});
+class AdminQRScannerScreen extends StatefulWidget {
+  final Event? event;
+
+  const AdminQRScannerScreen({super.key, this.event});
 
   @override
-  State<QRScannerScreen> createState() => _QRScannerScreenState();
+  State<AdminQRScannerScreen> createState() => _AdminQRScannerScreenState();
 }
 
-class _QRScannerScreenState extends State<QRScannerScreen> {
+class _AdminQRScannerScreenState extends State<AdminQRScannerScreen> {
   final MobileScannerController cameraController = MobileScannerController();
   bool _isProcessing = false;
 
@@ -18,8 +23,8 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     super.dispose();
   }
 
-  void _onDetect(BarcodeCapture capture) {
-    if (_isProcessing) return;
+  void _onDetect(BarcodeCapture capture) async {
+    if (_isProcessing || widget.event == null) return;
 
     final List<Barcode> qrCodes = capture.barcodes;
     for (final qrCode in qrCodes) {
@@ -30,6 +35,41 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
 
         final code = qrCode.rawValue!;
         debugPrint('QR Code found: $code');
+
+        try {
+          final studentId = int.parse(code);
+          final participationProvider = Provider.of<ParticipationProvider>(
+            context,
+            listen: false,
+          );
+          await participationProvider.adminRecordParticipation(
+            studentId,
+            widget.event!.id,
+          );
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Participation recorded successfully!'),
+              ),
+            );
+            Navigator.pop(context);
+          }
+        } catch (e) {
+          debugPrint('Error processing QR code: $e');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Invalid QR code or error recording participation',
+                ),
+              ),
+            );
+            setState(() {
+              _isProcessing = false;
+            });
+          }
+        }
         break;
       }
     }
@@ -67,7 +107,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Text(
-                    'Scan Event QR',
+                    'Scan Student QR',
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,

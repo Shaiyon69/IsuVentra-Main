@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'admin_dashboard_screen.dart'; // We will create this next
-import 'admin_event_management_screen.dart'; // We will create this next
-import '../screens/qr_scanner_screen.dart'; // Admin uses scanner for participation
-import 'profile_screen.dart'; // We can reuse this with small tweaks
+import 'admin_dashboard_screen.dart';
+import 'admin_event_management_screen.dart';
+import 'profile_screen.dart';
 
 class AdminHomeScreen extends StatefulWidget {
   const AdminHomeScreen({super.key});
@@ -15,9 +14,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   int _selectedIndex = 0;
 
   final List<Widget> _screens = [
-    const AdminDashboardScreen(), // New Admin Dashboard
-    const EventListScreen(), // CRUD for Events
-    const QRScannerScreen(), // Scan QR Codes for participation
+    const AdminDashboardScreen(),
+    const AdminEventManagementScreen(),
   ];
 
   @override
@@ -47,17 +45,12 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           NavigationDestination(
             icon: Icon(Icons.analytics_outlined),
             selectedIcon: Icon(Icons.analytics),
-            label: 'Overview',
+            label: 'Dashboard',
           ),
           NavigationDestination(
             icon: Icon(Icons.edit_calendar_outlined),
             selectedIcon: Icon(Icons.edit_calendar),
             label: 'Manage Events',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.qr_code_2),
-            selectedIcon: Icon(Icons.qr_code),
-            label: 'Generate QR',
           ),
         ],
       ),

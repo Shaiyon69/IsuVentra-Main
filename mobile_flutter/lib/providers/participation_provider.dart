@@ -37,6 +37,20 @@ class ParticipationProvider with ChangeNotifier {
     }
   }
 
+  // ADMIN RECORD PARTICIPATION
+  Future<String> adminRecordParticipation(int studentId, int eventId) async {
+    try {
+      await _api.post('/participations', {
+        'student_id': studentId,
+        'event_id': eventId,
+        'time_in': DateTime.now().toIso8601String(),
+      });
+      return 'Participation recorded successfully';
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   // FETCH HISTORY
   Future<void> fetchHistory() async {
     _isLoading = true;
