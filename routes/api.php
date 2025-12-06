@@ -6,96 +6,107 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\ParticipationController;
-
+use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Middleware\AdminCheck;
 
-Route::get('user', function (Request $request) {
-    $user = $request->user();
-    // Load student relation if exists
-    $user->loadMissing('student');
+/*
+|--------------------------------------------------------------------------
+| PUBLIC / OPEN ROUTES (No Login Required)
+|--------------------------------------------------------------------------
+*/
 
-    $response = [
-        'id' => $user->id,
-        'name' => $user->name,
-        'email' => $user->email,
-        'is_admin' => $user->is_admin,
-    ];
-
-    if ($user->student) {
-        $student = $user->student;
-        $response['student_id'] = $student->student_id;
-        $response['course'] = $student->course;
-        // normalize backend field 'year_lvl' to 'year_level' expected by the mobile app
-        $response['year_level'] = $student->year_lvl;
-        $response['campus'] = $student->campus;
-    }
-
-    return response()->json($response);
-})->middleware('auth:sanctum');
-
-// API Routes
-
-// Fetch only (Open APIs)
-Route::name('api.')->group(function () {
-
-    Route::controller(StudentController::class)->group(function () {
-        Route::get('students', 'index');
-        Route::get('students/{id}', 'show');
-    });
-
-    Route::controller(EventController::class)->group(function () {
-        Route::get('events', 'index');
-        Route::get('events/{id}', 'show');
-    });
-
-    Route::controller(ParticipationController::class)->group(function () {
-        Route::get('participation', 'index');
-        Route::get('participation/{id}', 'show');
-    });
+// Auth
+Route::controller(AuthController::class)->group(function () {
+    Route::post('/register', 'register');
+    Route::post('/login', 'login');
 });
 
-// Authorized-only (Protected APIs)
+
+
+/*
+|--------------------------------------------------------------------------
+| PROTECTED ROUTES (Login Required)
+|--------------------------------------------------------------------------
+*/
 Route::middleware('auth:sanctum')->group(function () {
 
-    //Students can only attend participations
-    Route::controller(ParticipationController::class)->group(function () {
-        Route::post('participations', 'store');
-        Route::delete('participations/{id}', 'destroy')->middleware([AdminCheck::class]);
+    // COMMON ROUTES
+    Route::name('api.')->group(function () {
+        Route::get('students', [StudentController::class, 'index']);
+        Route::get('students/{id}', [StudentController::class, 'show']);
+
+        Route::get('events', [EventController::class, 'index']);
+        Route::get('events/{id}', [EventController::class, 'show']);
+
+        Route::get('participation', [ParticipationController::class, 'index']);
+        Route::get('participation/{id}', [ParticipationController::class, 'show']);
+    });
+    // User Profile
+    //Code requred for Flutter 
+    Route::get('user', function (Request $request) {
+        $user = $request->user();
+        $user->loadMissing('student');
+
+        $response = [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'is_admin' => $user->is_admin, 
+        ];
+
+        if ($user->student) {
+            $student = $user->student;
+            $response['student_id'] = $student->student_id;
+            $response['course'] = $student->course;
+            $response['year_level'] = $student->year_lvl;
+            $response['campus'] = $student->campus;
+        }
+
+        return response()->json($response);
     });
 
+    Route::get('/validate-token', function (Request $request) {
+        return response()->json(['valid' => true, 'user' => $request->user()]);
+    });
+
+    Route::post('/logout', [AuthController::class, 'logout']);
+
+    // QR Code Actions (Students need this)
     Route::controller(ParticipationController::class)->group(function () {
         Route::post('/participations/scan', 'scan');
         Route::post('/participations/out', 'timeOut');
     });
 
 
-    Route::controller(EventController::class)->group(function () {
-        Route::post('events', 'store');
-        Route::post('/events/import', 'import');
-        Route::put('events/{id}', 'update');
-        Route::delete('events/{id}', 'destroy');
-    })->middleware([AdminCheck::class]);
+    //ADMIN EXCLUSIVE ROUTES
+    Route::middleware([AdminCheck::class])->group(function () {
 
-    Route::controller(StudentController::class)->group(function () {
-        Route::post('students', 'store');
-        Route::post('/students/import', 'import');
-        Route::put('students/{id}', 'update');
-        Route::delete('students/{id}', 'destroy');
-    })->middleware([AdminCheck::class]);
+        // Analytics and Forecasting
+        Route::get('/analytics/forecast', [AnalyticsController::class, 'getForecast']);
+
+        // Manual Participation Entry and Deletion
+        Route::controller(ParticipationController::class)->group(function () {
+            Route::post('participations', 'store'); // Manual Add (Admin only)
+            Route::delete('participations/{id}', 'destroy');
+        });
+
+        // Event Management (CUD + Import)
+        Route::controller(EventController::class)->group(function () {
+            Route::post('events', 'store');
+            Route::post('/events/import', 'import');
+            Route::put('events/{id}', 'update');
+            Route::delete('events/{id}', 'destroy');
+        });
+
+        // Student Management (CUD + Import)
+        Route::controller(StudentController::class)->group(function () {
+            Route::post('students', 'store');
+            Route::post('/students/import', 'import');
+            Route::put('students/{id}', 'update');
+            Route::delete('students/{id}', 'destroy');
+        });
+
+    }); 
 
 });
-
-//User Routes
-
-Route::controller(AuthController::class)->group(function () {
-    Route::post('/register', 'register');
-    Route::post('/login', 'login');
-    Route::post('/logout', 'logout')->middleware('auth:sanctum');
-});
-
-// routes/api.php
-Route::middleware('auth:sanctum')->get('/validate-token', function (Request $request) {
-    return response()->json(['valid' => true, 'user' => $request->user()]);
-});
-
