@@ -10,9 +10,10 @@ class StudentFactory extends Factory
 
     public function definition()
     {
+        
         return [
             'user_id' => null, // Let the Observer create the user!
-            'student_id' => $this->faker->unique()->numerify('S####'),
+            'student_id' => $this->faker->unique()->numerify('##-####'),
             'lrn' => $this->faker->numerify('############'), // 12 digits
             'name' => $this->faker->name(),
             'course' => "Test Course",

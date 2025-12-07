@@ -12,14 +12,27 @@ class EventController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         $now = Carbon::now();
+        $query = Event::query();
 
-        // PAGINATION ADDED
-        $events = Event::orderBy('time_start')
-            ->paginate(15)
+        // 1. Handle Search
+        if ($request->has('search') && $request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('location', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        // 2. Sort by latest start time (or keep your preferred sort)
+        $query->orderBy('time_start', 'desc');
+
+        $events = $query->paginate(15)
             ->through(function ($event) use ($now) {
+                // Add the 'is_ongoing' attribute dynamically
                 $event->is_ongoing = $now->between($event->time_start, $event->time_end);
                 return $event;
             });

@@ -37,8 +37,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('events', [EventController::class, 'index']);
         Route::get('events/{id}', [EventController::class, 'show']);
 
-        Route::get('participation', [ParticipationController::class, 'index']);
-        Route::get('participation/{id}', [ParticipationController::class, 'show']);
+        Route::get('participations', [ParticipationController::class, 'index']);
+        Route::get('participations/{id}', [ParticipationController::class, 'show']);
     });
     // User Profile
     //Code requred for Flutter 
@@ -93,6 +93,9 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('participations', 'store'); // Manual Add (Admin only)
             Route::delete('participations/{id}', 'destroy');
         });
+
+        // Assign Event Managers
+        Route::post('/events/{id}/assign', [EventController::class, 'assignManager']);
 
         // Event Management (CUD + Import)
         Route::controller(EventController::class)->group(function () {

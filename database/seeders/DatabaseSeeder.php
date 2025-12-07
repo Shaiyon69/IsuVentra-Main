@@ -29,11 +29,20 @@ class DatabaseSeeder extends Seeder
         // Create 1 student tied to the regular user
         \App\Models\Student::factory()->create([
             'user_id' => $regularUser->id,
-            'student_id' => 'S0001',
-            'name' => 'John Doe',
-            'course' => 'BSCS',
+            'student_id' => '23-0613',
+            'name' => 'Mitz Ignacio',
+            'course' => 'BSIT',
             'year_lvl' => 3,
-            'campus' => 'Main',
+            'department' => 'CCSICT',
+        ]);
+
+        \App\Models\Student::factory()->create([
+            'user_id' => $regularUser->id,
+            'student_id' => '23-0622',
+            'name' => 'Shaine Paolo Valdez',
+            'course' => 'BSIT',
+            'year_lvl' => 3,
+            'department' => 'CCSICT',
         ]);
 
         $this->call([

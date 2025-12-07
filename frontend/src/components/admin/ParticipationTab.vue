@@ -5,6 +5,16 @@
         <h3>Participation Logs</h3>
       </div>
       <div class="action-group">
+        <span class="p-input-icon-left">
+          <i class="pi pi-search" />
+          <InputText 
+            v-model="searchQuery" 
+            placeholder="Search student or event..." 
+            class="p-inputtext-sm search-input" 
+            @keydown.enter="triggerSearch"
+          />
+        </span>
+
         <input type="file" ref="fileInput" accept=".csv" style="display: none" @change="handleFileUpload" />
         <Button label="Import CSV" icon="pi pi-upload" severity="secondary" outlined size="small" @click="triggerFileInput" />
         <Button label="Record Entry" icon="pi pi-plus" size="small" @click="openModal" />
@@ -14,8 +24,7 @@
     <div class="table-container">
       <DataTable 
         :value="participation" 
-        paginator 
-        :rows="10" 
+        :loading="loading"
         stripedRows 
         class="custom-table" 
         scrollable 
@@ -23,22 +32,52 @@
       >
         <template #empty><div class="empty-msg">No records found.</div></template>
         
-        <Column field="student_name" header="Student" sortable class="font-bold"></Column>
-        <Column field="event_name" header="Event" sortable></Column>
+        <Column field="student_name" header="Student" class="font-bold">
+           <template #body="slotProps">
+             <span>{{ slotProps.data.student_name }}</span>
+             <span class="sub-text"> ({{ slotProps.data.student_school_id }})</span>
+           </template>
+        </Column>
+        <Column field="event_name" header="Event"></Column>
         
-        <Column header="Time In" sortable field="time_in">
+        <Column header="Time In" field="time_in">
           <template #body="slotProps">
             {{ new Date(slotProps.data.time_in).toLocaleString() }}
           </template>
         </Column>
         
-        <Column header="Time Out" sortable field="time_out">
+        <Column header="Time Out" field="time_out">
           <template #body="slotProps">
             <span v-if="slotProps.data.time_out">{{ new Date(slotProps.data.time_out).toLocaleString() }}</span>
             <span v-else class="ongoing-tag">Ongoing</span>
           </template>
         </Column>
       </DataTable>
+    </div>
+
+    <div class="pagination-footer">
+      <span class="page-info">
+        Showing {{ participation.length }} records on Page {{ currentPage }}
+      </span>
+      <div class="page-buttons">
+        <Button 
+          icon="pi pi-chevron-left" 
+          label="Prev" 
+          @click="changePage(currentPage - 1)" 
+          :disabled="currentPage <= 1 || loading" 
+          outlined 
+          size="small"
+        />
+        <Button 
+          label="Next" 
+          icon="pi pi-chevron-right" 
+          iconPos="right"
+          @click="changePage(currentPage + 1)" 
+          :disabled="!hasNextPage || loading" 
+          outlined 
+          size="small"
+        />
+      </div>
     </div>
 
     <Dialog v-model:visible="showModal" modal header="Manual Entry" :style="{ width: '450px' }" class="p-fluid">
@@ -101,22 +140,25 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import api from '@/services/api';
 import Papa from 'papaparse';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';
+import InputText from 'primevue/inputtext'; // Added for search
 import Dialog from 'primevue/dialog';
 import Dropdown from 'primevue/dropdown';
 import AutoComplete from 'primevue/autocomplete';
 
-const props = defineProps(['participation']);
-const emit = defineEmits(['refresh']);
+const props = defineProps(['participation', 'totalRecords', 'loading', 'currentPage']);
+const emit = defineEmits(['refresh', 'page-change', 'search']); // Added 'search'
 
 const showModal = ref(false);
 const isSubmitting = ref(false);
 const fileInput = ref(null);
+const searchQuery = ref('');
+const PER_PAGE = 15;
 
 // Data for dropdowns
 const localStudents = ref([]);
@@ -125,6 +167,20 @@ const filteredStudents = ref([]);
 const selectedStudent = ref(null);
 
 const form = reactive({ event_id: '', time_in: '', time_out: '' });
+
+// --- Computed & Methods ---
+const hasNextPage = computed(() => {
+  const maxPages = Math.ceil(props.totalRecords / PER_PAGE);
+  return props.currentPage < maxPages;
+});
+
+const changePage = (newPage) => {
+  emit('page-change', newPage);
+};
+
+const triggerSearch = () => {
+  emit('search', searchQuery.value);
+};
 
 // --- Autocomplete Logic ---
 const searchStudent = (event) => {
@@ -142,20 +198,15 @@ const openModal = () => {
   showModal.value = true;
 };
 
-// --- DATA FETCHING (Corrected for Non-Paginated Lists) ---
+// --- DATA FETCHING ---
 async function loadDropdowns() {
   try {
-    // We call the special "list" endpoints that return full arrays [ ... ]
-    // instead of paginated objects { data: [ ... ], ... }
     const [stuRes, eveRes] = await Promise.all([
       api.get('/list/students'), 
       api.get('/list/events')
     ]);
-    
-    // Assign directly because these endpoints return the array root
     localStudents.value = stuRes.data; 
     localEvents.value = eveRes.data;
-    
   } catch(e) { 
     console.error("Failed to load dropdown options:", e); 
   }
@@ -191,16 +242,14 @@ const handleFileUpload = (event) => {
   const file = event.target.files[0];
   if (!file) return;
   Papa.parse(file, {
-    header: true, 
-    skipEmptyLines: true, 
+    header: true, skipEmptyLines: true, 
     complete: async (results) => {
       if (confirm(`Import ${results.data.length} records?`)) {
         let success = 0;
-        // Simple loop for now; bulk import endpoint is better for large files
         for (const row of results.data) {
           try { 
             await api.post('/participations', { 
-              student_id: row.student_id, // Ensure your CSV matches backend expectation (ID vs String)
+              student_id: row.student_id, 
               event_id: row.event_id,
               time_in: row.time_in,
               time_out: row.time_out 
@@ -220,19 +269,31 @@ onMounted(loadDropdowns);
 </script>
 
 <style scoped>
-/* Reuse styles from EventsTab/StudentsTab */
+/* Reuse styles */
 .view-panel { background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 .view-header { padding: 1.5rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background-color: #f8fafc; }
 .title-group h3 { margin: 0; font-size: 1.25rem; color: #1e293b; }
-.action-group { display: flex; gap: 10px; }
+.action-group { display: flex; gap: 10px; align-items: center; }
+
+/* Search Input */
+.p-input-icon-left { position: relative; display: inline-block; }
+.p-input-icon-left > i { position: absolute; top: 50%; margin-top: -0.5rem; left: 0.75rem; color: #94a3b8; }
+.search-input { padding-left: 2.5rem; width: 240px; }
+
 .table-container { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
 .custom-table { flex: 1; }
 .empty-msg { text-align: center; padding: 2rem; color: #94a3b8; }
 .font-bold { font-weight: 600; color: #0f172a; }
+.sub-text { font-size: 0.8rem; color: #64748b; font-weight: 400; }
 
 .ongoing-tag { background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 12px; font-size: 0.85rem; font-weight: 600; }
 .autocomplete-item { display: flex; justify-content: space-between; width: 100%; }
 .autocomplete-item .id { color: #64748b; font-size: 0.85rem; }
+
+/* Pagination Footer */
+.pagination-footer { padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background-color: #f8fafc; }
+.page-info { font-size: 0.85rem; color: #64748b; font-weight: 500; }
+.page-buttons { display: flex; gap: 10px; }
 
 /* Forms */
 .form-container { display: flex; flex-direction: column; gap: 1rem; margin-top: 0.5rem; }

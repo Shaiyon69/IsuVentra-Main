@@ -3,9 +3,19 @@
     <div class="view-header">
       <div class="title-group">
         <h3>Student Directory</h3>
-        <span class="count-badge">{{ students.length }} records</span>
+        <span class="count-badge">{{ totalRecords || 0 }} records</span>
       </div>
       <div class="action-group">
+        <span class="p-input-icon-left">
+          <i class="pi pi-search" />
+          <InputText 
+            v-model="searchQuery" 
+            placeholder="Search students..." 
+            class="p-inputtext-sm search-input" 
+            @keydown.enter="triggerSearch"
+          />
+        </span>
+
         <input type="file" ref="fileInput" accept=".csv" style="display: none" @change="handleFileUpload" />
         <Button label="Import CSV" icon="pi pi-upload" severity="secondary" outlined size="small" @click="triggerFileInput" />
         <Button label="Add Student" icon="pi pi-user-plus" severity="success" size="small" @click="showModal = true" />
@@ -15,8 +25,7 @@
     <div class="table-container">
       <DataTable 
         :value="students" 
-        paginator 
-        :rows="8" 
+        :loading="loading" 
         stripedRows 
         class="custom-table"
         scrollable 
@@ -24,16 +33,41 @@
       >
         <template #empty><div class="empty-msg">No students found.</div></template>
         
-        <Column field="student_id" header="ID" sortable style="width: 20%"></Column>
-        <Column field="name" header="Full Name" sortable style="width: 30%" class="font-bold"></Column>
-        <Column field="course" header="Course" sortable style="width: 20%"></Column>
-        <Column field="year_lvl" header="Year" sortable style="width: 15%">
+        <Column field="student_id" header="ID" style="width: 20%"></Column>
+        <Column field="name" header="Full Name" style="width: 30%" class="font-bold"></Column>
+        <Column field="course" header="Course" style="width: 20%"></Column>
+        <Column field="year_lvl" header="Year" style="width: 15%">
           <template #body="slotProps">
             <span class="year-badge">Year {{ slotProps.data.year_lvl }}</span>
           </template>
         </Column>
-        <Column field="Department" header="Department" sortable style="width: 15%"></Column>
+        <Column field="department" header="Department" style="width: 15%"></Column>
       </DataTable>
+    </div>
+
+    <div class="pagination-footer">
+      <span class="page-info">
+        Showing {{ students.length }} records on Page {{ currentPage }}
+      </span>
+      <div class="page-buttons">
+        <Button 
+          icon="pi pi-chevron-left" 
+          label="Prev" 
+          @click="changePage(currentPage - 1)" 
+          :disabled="currentPage <= 1 || loading" 
+          outlined 
+          size="small"
+        />
+        <Button 
+          label="Next" 
+          icon="pi pi-chevron-right" 
+          iconPos="right"
+          @click="changePage(currentPage + 1)" 
+          :disabled="!hasNextPage || loading" 
+          outlined 
+          size="small"
+        />
+      </div>
     </div>
 
     <Dialog v-model:visible="showModal" modal header="Add New Student" :style="{ width: '450px' }" class="p-fluid">
@@ -44,7 +78,7 @@
         </div>
 
         <div class="field">
-          <label>Student ID</label>
+          <label>LRN</label>
           <InputText v-model="form.lrn" placeholder="LRN" required />
         </div>
         
@@ -79,7 +113,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
+import { ref, reactive, computed } from 'vue';
 import api from '@/services/api';
 import Papa from 'papaparse';
 import DataTable from 'primevue/datatable';
@@ -89,13 +123,32 @@ import InputText from 'primevue/inputtext';
 import Dialog from 'primevue/dialog';
 import Dropdown from 'primevue/dropdown';
 
-const props = defineProps(['students']);
-const emit = defineEmits(['refresh']);
+const props = defineProps(['students', 'totalRecords', 'loading', 'currentPage']);
+const emit = defineEmits(['refresh', 'page-change', 'search']);
+
 const showModal = ref(false);
 const isSubmitting = ref(false);
 const fileInput = ref(null);
-const form = reactive({ student_id: '', name: '', course: '', year_lvl: 1, department: '' });
+const searchQuery = ref('');
+const PER_PAGE = 15;
 
+const form = reactive({ student_id: '', lrn: '', name: '', course: '', year_lvl: 1, department: '' });
+
+// --- Computed & Methods ---
+const hasNextPage = computed(() => {
+  const maxPages = Math.ceil(props.totalRecords / PER_PAGE);
+  return props.currentPage < maxPages;
+});
+
+const changePage = (newPage) => {
+  emit('page-change', newPage);
+};
+
+const triggerSearch = () => {
+  emit('search', searchQuery.value);
+};
+
+// --- Actions ---
 async function submitStudent() {
   isSubmitting.value = true;
   try {
@@ -137,23 +190,17 @@ const handleFileUpload = (event) => {
 </script>
 
 <style scoped>
-/* Card & Header */
-.view-panel {
-  background: white; border-radius: 12px;
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-  display: flex; flex-direction: column; height: 100%;
-  overflow: hidden;
-}
-
-.view-header {
-  padding: 1.5rem; border-bottom: 1px solid #e2e8f0;
-  display: flex; justify-content: space-between; align-items: center;
-  background-color: #f8fafc;
-}
-
+/* Reuse styles from EventsTab */
+.view-panel { background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+.view-header { padding: 1.5rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background-color: #f8fafc; }
 .title-group h3 { margin: 0; font-size: 1.25rem; color: #1e293b; }
 .count-badge { background: #e2e8f0; color: #475569; font-size: 0.8rem; padding: 2px 8px; border-radius: 12px; margin-left: 10px; }
-.action-group { display: flex; gap: 10px; }
+.action-group { display: flex; gap: 10px; align-items: center; }
+
+/* Search Input */
+.p-input-icon-left { position: relative; display: inline-block; }
+.p-input-icon-left > i { position: absolute; top: 50%; margin-top: -0.5rem; left: 0.75rem; color: #94a3b8; }
+.search-input { padding-left: 2.5rem; width: 240px; }
 
 /* Table */
 .table-container { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
@@ -161,6 +208,11 @@ const handleFileUpload = (event) => {
 .empty-msg { text-align: center; padding: 2rem; color: #94a3b8; }
 .year-badge { background: #e0f2fe; color: #0369a1; padding: 4px 10px; border-radius: 6px; font-weight: 600; font-size: 0.85rem; }
 .font-bold { font-weight: 600; color: #0f172a; }
+
+/* Pagination Footer */
+.pagination-footer { padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background-color: #f8fafc; }
+.page-info { font-size: 0.85rem; color: #64748b; font-weight: 500; }
+.page-buttons { display: flex; gap: 10px; }
 
 /* Form Styles */
 .form-container { display: flex; flex-direction: column; gap: 1rem; margin-top: 0.5rem; }

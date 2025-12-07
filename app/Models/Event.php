@@ -13,9 +13,18 @@ class Event extends Model
         'time_start',
         'time_end',
         'description',
-        'location'
+        'location',
+        'created_by'
     ];
 
+    public function creator() {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    // The list of sub-admins allowed to manage this event
+    public function managers() {
+        return $this->belongsToMany(User::class, 'event_managers');
+    }
     protected $casts = [
         'time_start' => 'datetime',
         'time_end' => 'datetime',

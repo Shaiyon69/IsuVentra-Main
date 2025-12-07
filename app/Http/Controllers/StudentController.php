@@ -11,11 +11,28 @@ class StudentController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        // PAGINATION ADDED
-        // You can increase '15' to '50' or '100' if you want larger pages
-        $students = Student::orderBy('created_at', 'desc')->paginate(15); 
+        $query = Student::query();
+
+        // 1. Handle Search
+        if ($request->has('search') && $request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('student_id', 'like', "%{$search}%")
+                  ->orWhere('lrn', 'like', "%{$search}%")
+                  ->orWhere('course', 'like', "%{$search}%");
+            });
+        }
+
+        // 2. Sort
+        $query->orderBy('created_at', 'desc');
+
+        // 3. Dynamic Pagination
+        $perPage = $request->input('per_page', 15);
+        $students = $query->paginate($perPage); 
+        
         return response()->json($students);
     }
 
@@ -36,15 +53,14 @@ class StudentController extends Controller
     {
         $validated = $request->validate([
             'student_id' => 'required|string|max:20|unique:students,student_id',
-            'lrn'        => 'required|digits:12|unique:students,lrn', // Added LRN validation
+            'lrn'        => 'required|digits:12|unique:students,lrn', 
             'name'       => 'required|string|max:255',
             'course'     => 'required|string|max:100',
             'year_lvl'   => 'required|integer|min:1|max:10',
-            'department'     => 'required|string|max:100',
+            'department' => 'required|string|max:100',
         ]);
 
         $student = DB::transaction(function () use ($validated) {
-            // Since $validated contains 'lrn' now, it will be automatically included here
             return Student::create($validated);
         });
 
@@ -74,11 +90,11 @@ class StudentController extends Controller
     {
         $validated = $request->validate([
             'student_id' => 'sometimes|required|string|max:20|unique:students,student_id,' . $id,
-            'lrn'        => 'sometimes|required|digits:12|unique:students,lrn,' . $id, // Added LRN validation (ignoring current ID)
+            'lrn'        => 'sometimes|required|digits:12|unique:students,lrn,' . $id, 
             'name'       => 'sometimes|required|string|max:255',
             'course'     => 'sometimes|required|string|max:100',
             'year_lvl'   => 'sometimes|required|integer|min:1|max:10',
-            'department'     => 'sometimes|required|string|max:100',
+            'department' => 'sometimes|required|string|max:100',
         ]);
 
         $student = Student::find($id);
@@ -130,23 +146,22 @@ class StudentController extends Controller
         $request->validate([
             'data' => 'required|array',
             'data.*.student_id' => 'required|distinct|unique:students,student_id',
-            'data.*.lrn'        => 'required|digits:12|distinct|unique:students,lrn', // Fixed typo 'data*' -> 'data.*'
+            'data.*.lrn'        => 'required|digits:12|distinct|unique:students,lrn',
             'data.*.name'       => 'required',
             'data.*.course'     => 'required',
             'data.*.year_lvl'   => 'required|integer',
-            'data.*.department'     => 'required',
+            'data.*.department' => 'required',
         ]);
 
         DB::transaction(function () use ($request) {
             foreach ($request->data as $row) {
                 Student::create([
                     'student_id' => $row['student_id'],
-                    'lrn'        => $row['lrn'], // Map LRN from CSV row
+                    'lrn'        => $row['lrn'], 
                     'name'       => $row['name'],
                     'course'     => $row['course'],
                     'year_lvl'   => $row['year_lvl'],
-                    'department'     => $row['department'],
-                    // user_id is automatically handled by the Observer
+                    'department' => $row['department'],
                 ]);
             }
         });
