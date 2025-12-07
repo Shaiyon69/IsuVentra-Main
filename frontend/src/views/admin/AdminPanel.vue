@@ -103,7 +103,6 @@ const pageTitle = computed(() => {
 });
 
 async function loadAdminData() {
-  // Only show full loading spinner if we have NO data
   if (students.value.length === 0) isLoading.value = true;
 
   try {
@@ -112,9 +111,12 @@ async function loadAdminData() {
       api.get("/events"),
       api.get("/participation")
     ]);
-    students.value = stuRes.data;
-    events.value = eveRes.data;
-    participation.value = partRes.data;
+    
+    // UPDATED: Access the .data.data property
+    students.value = stuRes.data.data; 
+    events.value = eveRes.data.data;
+    participation.value = partRes.data.data;
+    
   } catch (err) {
     console.error("Failed to load admin data:", err);
   } finally {

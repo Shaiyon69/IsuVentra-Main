@@ -14,20 +14,31 @@ class EventController extends Controller
      */
     public function index()
     {
-        // Fetch all events, ordered by start time
-        $events = Event::orderBy('time_start')->get();
-
-        // Add is_ongoing field based on current time
         $now = Carbon::now();
-        $events->transform(function ($event) use ($now) {
-            $event->is_ongoing = $now->between($event->time_start, $event->time_end);
-            return $event;
-        });
 
-        // Return as JSON array for frontend compatibility
+        // PAGINATION ADDED
+        $events = Event::orderBy('time_start')
+            ->paginate(15)
+            ->through(function ($event) use ($now) {
+                $event->is_ongoing = $now->between($event->time_start, $event->time_end);
+                return $event;
+            });
+
         return response()->json($events);
     }
 
+    /**
+     * Get lightweight list for dropdowns (No Pagination)
+     */
+    public function listAll()
+    {
+        // Only fetch ID and Title
+        $events = Event::select('id', 'title')
+            ->orderBy('title')
+            ->get();
+            
+        return response()->json($events);
+    }
 
     /**
      * Store a newly created resource in storage.

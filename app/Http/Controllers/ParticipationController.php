@@ -13,11 +13,12 @@ class ParticipationController extends Controller
     // ============================
     public function index()
     {
-        // Optimized Eager Loading
+        // PAGINATION ADDED: paginate(15) instead of get()
+        // 'through' allows transforming the data without losing pagination metadata
         $participations = Participation::with(['student', 'event'])
             ->orderBy('time_in', 'desc')
-            ->get()
-            ->map(function ($p) {
+            ->paginate(15) 
+            ->through(function ($p) {
                 return [
                     'id' => $p->id,
                     'student_id' => $p->student_id,
@@ -120,5 +121,31 @@ class ParticipationController extends Controller
 
             return response()->json(['status' => 'timed_out', 'message' => 'Timed out successfully.']);
         });
+    }
+
+    public function getDashboardStats()
+    {
+        // 1. Card Counts (Fast aggregate queries)
+        $totalStudents = Student::count();
+        $totalEvents = Event::count();
+        $totalParticipations = Participation::count();
+
+        // 2. Main Chart Data (Group by Event)
+        // This gives us the total count per event without loading all rows
+        $eventPopularity = DB::table('participations')
+            ->join('events', 'participations.event_id', '=', 'events.id')
+            ->select('events.title', DB::raw('count(*) as total'))
+            ->groupBy('events.title')
+            ->orderByDesc('total')
+            ->get();
+
+        return response()->json([
+            'counts' => [
+                'students' => $totalStudents,
+                'events' => $totalEvents,
+                'participations' => $totalParticipations
+            ],
+            'chart_data' => $eventPopularity
+        ]);
     }
 }

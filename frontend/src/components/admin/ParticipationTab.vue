@@ -12,13 +12,26 @@
     </div>
 
     <div class="table-container">
-      <DataTable :value="participation" paginator :rows="10" stripedRows class="custom-table" scrollable scrollHeight="flex">
+      <DataTable 
+        :value="participation" 
+        paginator 
+        :rows="10" 
+        stripedRows 
+        class="custom-table" 
+        scrollable 
+        scrollHeight="flex"
+      >
         <template #empty><div class="empty-msg">No records found.</div></template>
+        
         <Column field="student_name" header="Student" sortable class="font-bold"></Column>
         <Column field="event_name" header="Event" sortable></Column>
+        
         <Column header="Time In" sortable field="time_in">
-          <template #body="slotProps">{{ new Date(slotProps.data.time_in).toLocaleString() }}</template>
+          <template #body="slotProps">
+            {{ new Date(slotProps.data.time_in).toLocaleString() }}
+          </template>
         </Column>
+        
         <Column header="Time Out" sortable field="time_out">
           <template #body="slotProps">
             <span v-if="slotProps.data.time_out">{{ new Date(slotProps.data.time_out).toLocaleString() }}</span>
@@ -41,6 +54,7 @@
             placeholder="Choose Event" 
             class="w-full"
             filter
+            required
           />
         </div>
 
@@ -55,6 +69,7 @@
             forceSelection
             dropdown
             class="w-full"
+            required
           >
             <template #option="slotProps">
               <div class="autocomplete-item">
@@ -98,15 +113,20 @@ import AutoComplete from 'primevue/autocomplete';
 
 const props = defineProps(['participation']);
 const emit = defineEmits(['refresh']);
+
 const showModal = ref(false);
 const isSubmitting = ref(false);
 const fileInput = ref(null);
+
+// Data for dropdowns
 const localStudents = ref([]);
 const localEvents = ref([]);
 const filteredStudents = ref([]);
 const selectedStudent = ref(null);
+
 const form = reactive({ event_id: '', time_in: '', time_out: '' });
 
+// --- Autocomplete Logic ---
 const searchStudent = (event) => {
   const query = event.query.toLowerCase();
   filteredStudents.value = localStudents.value.filter(s => 
@@ -115,21 +135,37 @@ const searchStudent = (event) => {
 };
 
 const openModal = () => {
-  form.event_id = ''; form.time_in = ''; form.time_out = ''; selectedStudent.value = null; showModal.value = true;
+  form.event_id = ''; 
+  form.time_in = ''; 
+  form.time_out = ''; 
+  selectedStudent.value = null; 
+  showModal.value = true;
 };
 
+// --- DATA FETCHING (Corrected for Non-Paginated Lists) ---
 async function loadDropdowns() {
   try {
-    const [stuRes, eveRes] = await Promise.all([api.get('/students'), api.get('/events')]);
-    localStudents.value = stuRes.data;
+    // We call the special "list" endpoints that return full arrays [ ... ]
+    // instead of paginated objects { data: [ ... ], ... }
+    const [stuRes, eveRes] = await Promise.all([
+      api.get('/list/students'), 
+      api.get('/list/events')
+    ]);
+    
+    // Assign directly because these endpoints return the array root
+    localStudents.value = stuRes.data; 
     localEvents.value = eveRes.data;
-  } catch(e) { console.error(e); }
+    
+  } catch(e) { 
+    console.error("Failed to load dropdown options:", e); 
+  }
 }
 
 const formatToBackend = (val) => val ? val.replace('T', ' ') + ':00' : null;
 
 async function submitParticipation() {
   if (!selectedStudent.value) { alert("Please select a student."); return; }
+  
   isSubmitting.value = true;
   try {
     const payload = {
@@ -142,12 +178,43 @@ async function submitParticipation() {
     showModal.value = false;
     emit('refresh');
     alert('Record added successfully!');
-  } catch (error) { alert(error.response?.data?.message || 'Failed.'); }
-  finally { isSubmitting.value = false; }
+  } catch (error) { 
+    alert(error.response?.data?.message || 'Failed.'); 
+  } finally { 
+    isSubmitting.value = false; 
+  }
 }
 
 const triggerFileInput = () => fileInput.value.click();
-const handleFileUpload = (e) => { /* Same CSV Logic */ };
+
+const handleFileUpload = (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+  Papa.parse(file, {
+    header: true, 
+    skipEmptyLines: true, 
+    complete: async (results) => {
+      if (confirm(`Import ${results.data.length} records?`)) {
+        let success = 0;
+        // Simple loop for now; bulk import endpoint is better for large files
+        for (const row of results.data) {
+          try { 
+            await api.post('/participations', { 
+              student_id: row.student_id, // Ensure your CSV matches backend expectation (ID vs String)
+              event_id: row.event_id,
+              time_in: row.time_in,
+              time_out: row.time_out 
+            }); 
+            success++; 
+          } catch(e){}
+        }
+        alert(`Imported ${success} records.`);
+        emit('refresh');
+      }
+      event.target.value = '';
+    }
+  });
+};
 
 onMounted(loadDropdowns);
 </script>

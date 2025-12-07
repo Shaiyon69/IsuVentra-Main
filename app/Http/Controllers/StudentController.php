@@ -13,8 +13,20 @@ class StudentController extends Controller
      */
     public function index()
     {
-        $student = Student::all();
-        return response()->json($student);
+        // PAGINATION ADDED
+        // You can increase '15' to '50' or '100' if you want larger pages
+        $students = Student::orderBy('created_at', 'desc')->paginate(15); 
+        return response()->json($students);
+    }
+
+    public function listAll()
+    {
+        // Only fetch ID, Name, and Student ID. Don't fetch created_at, etc.
+        $students = Student::select('id', 'name', 'student_id')
+            ->orderBy('name')
+            ->get();
+            
+        return response()->json($students);
     }
 
     /**

@@ -5,7 +5,7 @@
         <div class="icon-box"><i class="pi pi-users"></i></div>
         <div class="stat-content">
           <span class="stat-label">Total Students</span>
-          <span class="stat-value">{{ students.length }}</span>
+          <span class="stat-value">{{ stats.students }}</span>
         </div>
       </div>
       
@@ -13,7 +13,7 @@
         <div class="icon-box"><i class="pi pi-calendar"></i></div>
         <div class="stat-content">
           <span class="stat-label">Total Events</span>
-          <span class="stat-value">{{ events.length }}</span>
+          <span class="stat-value">{{ stats.events }}</span>
         </div>
       </div>
 
@@ -21,7 +21,7 @@
         <div class="icon-box"><i class="pi pi-check-circle"></i></div>
         <div class="stat-content">
           <span class="stat-label">Participations</span>
-          <span class="stat-value">{{ participation.length }}</span>
+          <span class="stat-value">{{ stats.participations }}</span>
         </div>
       </div>
     </div>
@@ -78,7 +78,7 @@
               <Column field="ma" header="3-Pt Moving Avg"></Column>
               <Column field="es" header="Exp. Smoothing">
                 <template #body="slotProps">
-                  <span :class="{'font-bold text-green-600': slotProps.data.year.toString().includes('Proj')}">
+                  <span :class="{'font-bold text-green-600': slotProps.data.year.includes('Proj')}">
                     {{ slotProps.data.es }}
                   </span>
                 </template>
@@ -137,19 +137,22 @@ import Tag from 'primevue/tag';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 
+// Props passed from AdminPanel.vue (These contain PAGINATED data, Page 1 only)
 const props = defineProps(['students', 'events', 'participation']);
 
 // State
+const stats = ref({ students: 0, events: 0, participations: 0 });
 const forecast = ref({ events: {} });
 const loadingForecast = ref(true);
 const chartCanvas = ref(null);
 
-// Chart Instances
-const forecastRefs = {}; 
+// Non-reactive storage
+const forecastRefs = {};
 const forecastChartInstances = {};
 let mainChartInstance = null;
 
-// Computed
+// Computed (These are fine to rely on props because "Ongoing" and "Latest" 
+// usually appear on the first page of results anyway)
 const ongoingEvents = computed(() => props.events.filter(e => e.is_ongoing));
 const latestParticipation = computed(() => props.participation.slice(0, 5));
 
@@ -162,17 +165,14 @@ const getSeverity = (type) => {
 // --- DATA PROCESSING ---
 const formatRows = (eventData) => {
   const rows = [];
-  // History
   eventData.years.forEach((y, i) => {
     rows.push({
-      // FIX: Explicitly String(y) to prevent .includes() crash on Numbers
-      year: String(y), 
+      year: String(y),
       actual: eventData.actual[i],
       ma: eventData.moving_average[i] !== null ? Number(eventData.moving_average[i]).toFixed(2) : '-',
       es: Number(eventData.exponential_smoothing[i]).toFixed(2)
     });
   });
-  // Forecast
   eventData.forecast_years.forEach((y, i) => {
     rows.push({
       year: String(y) + ' (Proj)',
@@ -184,13 +184,13 @@ const formatRows = (eventData) => {
   return rows;
 };
 
-// --- API FETCH ---
+// --- API FETCHES ---
+
+// 1. Fetch Forecast (AI)
 async function fetchForecastData() {
   try {
     const res = await api.get('/analytics/forecast');
     const data = res.data;
-
-    // Process rows immediately upon fetch
     for (const key in data.events) {
       if (!data.events[key].message) {
         data.events[key].rows = formatRows(data.events[key]);
@@ -204,30 +204,55 @@ async function fetchForecastData() {
   }
 }
 
-// --- MAIN CHART ---
-function renderMainChart() {
-  if (!chartCanvas.value) return;
+// 2. Fetch Dashboard Stats (For Main Chart & Cards)
+// This fixes the "Only 15 events" issue by fetching aggregates from backend
+async function fetchDashboardStats() {
+  try {
+    const res = await api.get('/analytics/stats');
+    
+    // Update top cards
+    stats.value = res.data.counts;
+
+    // Update Main Chart
+    renderMainChart(res.data.chart_data);
+  } catch (e) {
+    console.error("Stats Error:", e);
+  }
+}
+
+// --- MAIN CHART RENDERING ---
+function renderMainChart(chartData) {
+  if (!chartCanvas.value || !chartData) return;
+  
   if (mainChartInstance) mainChartInstance.destroy();
 
-  const counts = props.events.map(e => 
-    props.participation.filter(p => p.event_id === e.id).length
-  );
+  // Extract data from the new backend response
+  const labels = chartData.map(item => item.title);
+  const counts = chartData.map(item => item.total);
   
   mainChartInstance = new Chart(chartCanvas.value, {
     type: 'bar',
     data: {
-      labels: props.events.map(e => e.title),
-      datasets: [{ label: 'Participants', data: counts, backgroundColor: '#10b981', borderRadius: 4 }]
+      labels: labels,
+      datasets: [{ 
+        label: 'Participants', 
+        data: counts, 
+        backgroundColor: '#10b981', 
+        borderRadius: 4 
+      }]
     },
-    options: { responsive: true, maintainAspectRatio: false }
+    options: { 
+      responsive: true, 
+      maintainAspectRatio: false,
+      scales: { y: { beginAtZero: true } }
+    }
   });
 }
 
-// --- AI CHARTS (Template Ref Handler) ---
+// --- AI CHART RENDERING ---
 function setForecastRef(el, key) {
   if (el) {
     forecastRefs[key] = el;
-    // Render only if not already exists
     if (!forecastChartInstances[key]) {
       nextTick(() => renderSingleForecastChart(key));
     }
@@ -238,11 +263,8 @@ function renderSingleForecastChart(baseName) {
   const data = forecast.value.events[baseName];
   if (!data || !forecastRefs[baseName]) return;
 
-  if (forecastChartInstances[baseName]) {
-    forecastChartInstances[baseName].destroy();
-  }
-
   const ctx = forecastRefs[baseName].getContext('2d');
+  if (forecastChartInstances[baseName]) forecastChartInstances[baseName].destroy();
 
   forecastChartInstances[baseName] = new Chart(ctx, {
     type: 'line',
@@ -254,34 +276,27 @@ function renderSingleForecastChart(baseName) {
         { label: 'Moving Avg', data: [...data.moving_average, ...data.forecast_moving_average], borderColor: '#3b82f6', borderDash: [2,2], tension: 0.3 }
       ]
     },
-    options: { 
-      responsive: true, 
-      maintainAspectRatio: false,
-      plugins: { legend: { position: 'top' } } 
-    }
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }
   });
 }
 
-// --- CLEANUP ---
 onBeforeUnmount(() => {
   if (mainChartInstance) mainChartInstance.destroy();
   for (const key in forecastChartInstances) {
-    if (forecastChartInstances[key]) {
-      forecastChartInstances[key].destroy();
-    }
+    if (forecastChartInstances[key]) forecastChartInstances[key].destroy();
   }
 });
 
 onMounted(() => {
-  renderMainChart();
+  // We no longer rely on props for the chart or stats. 
+  // We fetch fresh aggregates.
   fetchForecastData();
+  fetchDashboardStats();
 });
 </script>
 
 <style scoped>
 .overview-grid { display: flex; flex-direction: column; gap: 2rem; width: 100%; }
-
-/* Stats Row */
 .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; }
 .stat-card { background: white; border-radius: 16px; padding: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 1.5rem; border-left: 5px solid transparent; transition: transform 0.2s; }
 .stat-card:hover { transform: translateY(-3px); }
@@ -295,14 +310,10 @@ onMounted(() => {
 .stat-content { display: flex; flex-direction: column; }
 .stat-label { font-size: 0.8rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
 .stat-value { font-size: 2rem; font-weight: 800; color: #1e293b; line-height: 1.1; }
-
-/* Dashboard Cards */
 .dashboard-card { background: white; border-radius: 16px; padding: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); display: flex; flex-direction: column; }
 .card-header { margin-bottom: 1.5rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 1rem; }
 .card-header h3 { margin: 0; font-size: 1.25rem; color: #1e293b; font-weight: 700; }
 .chart-wrapper { height: 350px; position: relative; width: 100%; }
-
-/* AI Section */
 .ai-header h3 { color: #064e3b; display: flex; align-items: center; gap: 8px; }
 .loading-state { text-align: center; padding: 2rem; color: #64748b; }
 .accordion-custom-head { width: 100%; display: flex; justify-content: space-between; align-items: center; padding-right: 1rem; }
@@ -313,8 +324,6 @@ onMounted(() => {
 .insight-container.negative { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
 .insight-container.neutral { background: #fffbeb; border-color: #fde68a; color: #92400e; }
 .forecast-chart-container { height: 300px; position: relative; width: 100%; margin-bottom: 2rem; }
-
-/* Split Row */
 .split-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem; }
 .activity-list { list-style: none; padding: 0; margin: 0; }
 .activity-list li { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; border-bottom: 1px solid #f1f5f9; }

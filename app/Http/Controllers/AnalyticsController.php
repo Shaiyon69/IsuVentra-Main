@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Participation;
 use Carbon\Carbon;
+use App\Models\Participation;
+use App\Models\Event;
+use App\Models\Student;
+use Illuminate\Support\Facades\DB;
 
 class AnalyticsController extends Controller
 {
@@ -165,21 +168,47 @@ class AnalyticsController extends Controller
         if ($diffPercent > 10) {
             return [
                 'type' => 'positive',
-                'label' => 'Growth 📈',
+                'label' => 'Growth',
                 'text' => 'ISUVentra predicts a +' . round($diffPercent, 1) . '% surge based on trends.'
             ];
         } elseif ($diffPercent < -5) {
             return [
                 'type' => 'negative',
-                'label' => 'Decline 📉',
+                'label' => 'Decline',
                 'text' => 'ISUVentra predicts a ' . round($diffPercent, 1) . '% drop. Considerations needed.'
             ];
         } else {
             return [
                 'type' => 'neutral',
-                'label' => 'Stable ➖',
+                'label' => 'Stable',
                 'text' => 'Attendance is expected to remain consistent with previous years.'
             ];
         }
+    }
+
+    public function getDashboardStats()
+    {
+        // 1. Card Counts (Fast aggregate queries)
+        $totalStudents = Student::count();
+        $totalEvents = Event::count();
+        $totalParticipations = Participation::count();
+
+        // 2. Main Chart Data (Group by Event)
+        // This gives us the total count per event without loading all rows
+        $eventPopularity = DB::table('participations')
+            ->join('events', 'participations.event_id', '=', 'events.id')
+            ->select('events.title', DB::raw('count(*) as total'))
+            ->groupBy('events.title')
+            ->orderByDesc('total')
+            ->get();
+
+        return response()->json([
+            'counts' => [
+                'students' => $totalStudents,
+                'events' => $totalEvents,
+                'participations' => $totalParticipations
+            ],
+            'chart_data' => $eventPopularity
+        ]);
     }
 }

@@ -22,8 +22,6 @@ Route::controller(AuthController::class)->group(function () {
     Route::post('/login', 'login');
 });
 
-
-
 /*
 |--------------------------------------------------------------------------
 | PROTECTED ROUTES (Login Required)
@@ -84,6 +82,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Analytics and Forecasting
         Route::get('/analytics/forecast', [AnalyticsController::class, 'getForecast']);
+        Route::get('/analytics/stats', [AnalyticsController::class, 'getDashboardStats']);
+
+        // Lightweight Lists for Modals' Dropdowns
+        Route::get('/list/students', [StudentController::class, 'listAll']);
+        Route::get('/list/events', [EventController::class, 'listAll']);
 
         // Manual Participation Entry and Deletion
         Route::controller(ParticipationController::class)->group(function () {
