@@ -12,8 +12,8 @@ export const useAuthStore = defineStore('auth', {
         isAdmin: (state) => !!state.user?.is_admin,
         // role: (state) => state.user?.is_admin ? 'admin' : 'user',
         role: (state) => {
-            if (state.user.is_admin = 0) return 'guest';
-            else if (state.user.is_admin = 1) return 'admin';
+            if (state.user.is_admin == 0) return 'guest';
+            else if (state.user.is_admin == 1) return 'admin';
             else return 'sub-admin';
         }
     },
