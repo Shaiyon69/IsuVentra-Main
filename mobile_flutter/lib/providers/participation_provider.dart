@@ -1,69 +1,53 @@
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
 import '../models/participation_model.dart';
+import '../services/api_service.dart';
 
 class ParticipationProvider with ChangeNotifier {
   final ApiService _api = ApiService();
 
-  List<Participation> _history = [];
+  List<Participation> _participations = [];
   bool _isLoading = false;
+  String? _errorMessage;
 
-  List<Participation> get history => _history;
+  List<Participation> get participations => _participations;
   bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
 
-  // CLOCK IN
-  Future<String> scanIn(int eventId) async {
+  Future<void> fetchParticipations() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
     try {
-      final response = await _api.post('/participations/scan', {
-        'event_id': eventId,
-      });
-      fetchHistory();
-      return response['message'];
+      final List<dynamic> data = await _api.get('/participation');
+      _participations = data
+          .map((json) => Participation.fromJson(json))
+          .toList();
     } catch (e) {
-      rethrow;
+      debugPrint("Participation Error: $e");
+      _errorMessage = "Failed to load participations. Please try again.";
+      _participations = [];
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
-  // CLOCK OUT
-  Future<String> scanOut(int eventId) async {
-    try {
-      final response = await _api.post('/participations/out', {
-        'event_id': eventId,
-      });
-      fetchHistory();
-      return response['message'];
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  // ADMIN RECORD PARTICIPATION
-  Future<String> adminRecordParticipation(int studentId, int eventId) async {
+  Future<void> adminRecordParticipation(int studentId, int eventId) async {
     try {
       await _api.post('/participations', {
         'student_id': studentId,
         'event_id': eventId,
         'time_in': DateTime.now().toIso8601String(),
       });
-      return 'Participation recorded successfully';
+      await fetchParticipations(); // Refresh the list
     } catch (e) {
-      rethrow;
+      debugPrint("Admin Record Participation Error: $e");
+      throw Exception('Failed to record participation');
     }
   }
 
-  // FETCH HISTORY
-  Future<void> fetchHistory() async {
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      final List<dynamic> data = await _api.get('/participation');
-      _history = data.map((json) => Participation.fromJson(json)).toList();
-    } catch (e) {
-      debugPrint("History Error: $e");
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
+  List<Participation> getParticipationsForEvent(int eventId) {
+    return _participations.where((p) => p.eventId == eventId).toList();
   }
 }

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../providers/dashboard_provider.dart';
 import '../models/event_model.dart';
+import 'admin_event_management_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -15,122 +17,102 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<DashboardProvider>().loadDashboardData();
+      final dashboardProvider = context.read<DashboardProvider>();
+      dashboardProvider.loadDashboardData();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<DashboardProvider>();
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+
+    return Scaffold(body: _buildDashboardTab(theme, colorScheme));
+  }
+
+  Widget _buildDashboardTab(ThemeData theme, ColorScheme colorScheme) {
+    final provider = context.watch<DashboardProvider>();
     final textTheme = theme.textTheme;
 
-    return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: () => provider.loadDashboardData(),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Dashboard Overview',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: colorScheme.onSurface,
-                ),
+    return RefreshIndicator(
+      onRefresh: () => provider.loadDashboardData(),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Dashboard Overview',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface,
               ),
-              const SizedBox(height: 16),
+            ),
+            const SizedBox(height: 16),
 
-              GridView.count(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                childAspectRatio: 1.2,
-                children: [
-                  _buildAdminStat(
-                    theme,
-                    'Total Events',
-                    '${provider.eventsCount}',
-                    Icons.event_note,
-                    colorScheme.primary,
-                  ),
-                  _buildAdminStat(
-                    theme,
-                    'Total Participations',
-                    '${provider.participationsCount}',
-                    Icons.group_add,
-                    colorScheme.tertiary,
-                  ),
-                  _buildAdminStat(
-                    theme,
-                    'Active Scans Today',
-                    '${provider.scansCount}',
-                    Icons.qr_code_scanner,
-                    colorScheme.secondary,
-                  ),
-                  _buildAdminStat(
-                    theme,
-                    'Events This Week',
-                    '${_getUpcomingEventsCount(provider.recentEvents)}',
-                    Icons.calendar_today,
-                    Colors.purple.shade600,
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 32),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Recent Events',
-                    style: textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurface,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      // TODO: Navigate to All Events Screen
-                    },
-                    child: const Text('View All'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              if (provider.recentEvents.isEmpty)
-                _buildEmptyState(
+            GridView.count(
+              crossAxisCount: 2,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              childAspectRatio: 1.2,
+              children: [
+                _buildAdminStat(
                   theme,
-                  icon: Icons.event_busy,
-                  title: "No recent events",
-                  subtitle: "Create your first event to get started",
-                )
-              else
-                ...provider.recentEvents
-                    .take(5)
-                    .map((event) => _buildEventCard(theme, event)),
-
-              const SizedBox(height: 32),
-
-              Text(
-                'Participation Summary',
-                style: textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: colorScheme.onSurface,
+                  'Total Events',
+                  '${provider.eventsCount}',
+                  Icons.event_note,
+                  colorScheme.primary,
                 ),
-              ),
-              const SizedBox(height: 12),
+                _buildAdminStat(
+                  theme,
+                  'Total Participations',
+                  '${provider.participationsCount}',
+                  Icons.group_add,
+                  colorScheme.tertiary,
+                ),
+                _buildAdminStat(
+                  theme,
+                  'Active Scans Today',
+                  '${provider.scansCount}',
+                  Icons.qr_code_scanner,
+                  colorScheme.secondary,
+                ),
+                _buildAdminStat(
+                  theme,
+                  'Events This Week',
+                  '${_getUpcomingEventsCount(provider.recentEvents)}',
+                  Icons.calendar_today,
+                  Colors.purple.shade600,
+                ),
+              ],
+            ),
 
-              _buildParticipationInfoCard(theme, provider.participationsCount),
-            ],
-          ),
+            const SizedBox(height: 32),
+
+            Text(
+              'Recent Events',
+              style: textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            if (provider.recentEvents.isEmpty)
+              _buildEmptyState(
+                theme,
+                icon: Icons.event_busy,
+                title: "No recent events",
+                subtitle: "Create your first event to get started",
+              )
+            else
+              ...provider.recentEvents
+                  .take(5)
+                  .map((event) => _buildEventCard(theme, event, provider)),
+          ],
         ),
       ),
     );
@@ -189,12 +171,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildEventCard(ThemeData theme, Event event) {
+  Widget _buildEventCard(
+    ThemeData theme,
+    Event event,
+    DashboardProvider provider,
+  ) {
     final colorScheme = theme.colorScheme;
-    final formattedDate =
-        '${event.timeStart.day}/${event.timeStart.month}/${event.timeStart.year}';
-    final formattedTime =
-        '${event.timeStart.hour}:${event.timeStart.minute.toString().padLeft(2, '0')}';
+    // Updated to use DateFormat for consistency
+    final formattedDateTime = DateFormat(
+      'MMM d, yyyy at h:mm a',
+    ).format(event.timeStart);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
@@ -232,9 +218,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '$formattedDate at $formattedTime',
+                    formattedDateTime,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${provider.eventParticipations[event.id] ?? 0} participants',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
@@ -256,54 +250,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ),
                 ),
               ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildParticipationInfoCard(ThemeData theme, int participationCount) {
-    final colorScheme = theme.colorScheme;
-    return Card(
-      elevation: 4,
-      color: colorScheme.secondaryContainer,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Icon(
-              Icons.bar_chart_sharp,
-              color: colorScheme.onSecondaryContainer,
-              size: 36,
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Total Participants: $participationCount',
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onSecondaryContainer,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Review detailed attendance logs and analytics here.',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSecondaryContainer.withOpacity(0.9),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            Icon(
-              Icons.arrow_forward_ios,
-              size: 16,
-              color: colorScheme.onSecondaryContainer,
-            ),
           ],
         ),
       ),

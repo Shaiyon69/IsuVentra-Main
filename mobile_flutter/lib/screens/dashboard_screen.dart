@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/dashboard_provider.dart';
+import '../providers/auth_provider.dart';
+import '../models/event_model.dart';
+import 'event_list_screen.dart';
+import 'view_event.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -25,6 +29,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
     final provider = context.watch<DashboardProvider>();
+
+    // Filter events to only show upcoming ones for the Student Dashboard
+    final upcomingEvents = provider.recentEvents
+        .where((event) => event.timeStart.isAfter(DateTime.now()))
+        .toList();
+    // Sort by timeStart for a better user experience
+    upcomingEvents.sort((a, b) => a.timeStart.compareTo(b.timeStart));
 
     return Scaffold(
       body: RefreshIndicator(
@@ -105,20 +116,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Center(
                   child: CircularProgressIndicator(color: colorScheme.primary),
                 )
-              else if (provider.recentEvents.isEmpty)
+              else if (upcomingEvents.isEmpty)
                 Padding(
                   padding: const EdgeInsets.all(20),
                   child: Center(
                     child: Text(
                       "No upcoming events.",
-                      style: textTheme.bodyLarge?.copyWith(
+                      style: theme.textTheme.bodyLarge?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ),
                 )
               else
-                _buildUpcomingEvents(context, provider.recentEvents),
+                _buildUpcomingEvents(context, upcomingEvents),
 
               const SizedBox(height: 24),
             ],
@@ -258,7 +269,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               color: colorScheme.outline,
             ),
             onTap: () {
-              // TODO: Navigate to Event Details Screen
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ViewEventScreen(event: event),
+                ),
+              );
             },
           ),
         );

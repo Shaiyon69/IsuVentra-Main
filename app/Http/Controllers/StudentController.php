@@ -47,7 +47,10 @@ class StudentController extends Controller
      */
     public function show(string $id)
     {
-        $student = Student::find($id);
+        $student = Student::where('student_id', $id)->first();
+        if (!$student) {
+            return response()->json(['message' => 'Student not found'], 404);
+        }
         return response()->json($student);
     }
 
@@ -96,6 +99,18 @@ class StudentController extends Controller
         });
 
         return response()->json(['message' => 'Student deleted successfully'], 200);
+    }
+
+    /**
+     * Fetch student by student_id.
+     */
+    public function showByStudentId(string $studentId)
+    {
+        $student = Student::where('student_id', $studentId)->first();
+        if (!$student) {
+            return response()->json(['message' => 'Student not found'], 404);
+        }
+        return response()->json($student);
     }
 
     public function import(Request $request)

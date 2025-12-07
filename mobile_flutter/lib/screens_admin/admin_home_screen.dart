@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'admin_dashboard_screen.dart';
 import 'admin_event_management_screen.dart';
+import 'admin_students_screen.dart';
 import 'profile_screen.dart';
 
 class AdminHomeScreen extends StatefulWidget {
@@ -16,6 +17,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   final List<Widget> _screens = [
     const AdminDashboardScreen(),
     const AdminEventManagementScreen(),
+    const AdminStudentsScreen(),
   ];
 
   @override
@@ -68,6 +70,11 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             icon: Icon(Icons.edit_calendar_outlined),
             selectedIcon: Icon(Icons.edit_calendar),
             label: 'Manage Events',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.people_outlined),
+            selectedIcon: Icon(Icons.people),
+            label: 'Students',
           ),
         ],
       ),

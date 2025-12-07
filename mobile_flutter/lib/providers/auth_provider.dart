@@ -95,6 +95,17 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  // FETCH USER BY STUDENT ID
+  Future<User?> fetchUserByStudentId(String studentId) async {
+    try {
+      final data = await _api.get('/users/by-student-id/$studentId');
+      return User.fromJson(data);
+    } catch (e) {
+      debugPrint('Error fetching user: $e');
+      return null;
+    }
+  }
+
   // LOGOUT
   Future<void> logout() async {
     try {

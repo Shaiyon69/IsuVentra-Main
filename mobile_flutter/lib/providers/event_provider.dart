@@ -42,6 +42,7 @@ class EventProvider with ChangeNotifier {
         'time_start': DateFormat('yyyy-MM-dd HH:mm:ss').format(event.timeStart),
         'time_end': DateFormat('yyyy-MM-dd HH:mm:ss').format(event.timeEnd),
         'location': event.location,
+        'creator_id': event.creatorId,
       });
       await fetchEvents(); // Refresh the events list
     } catch (e) {
