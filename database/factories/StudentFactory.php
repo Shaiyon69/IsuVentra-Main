@@ -17,7 +17,7 @@ class StudentFactory extends Factory
             'name' => $this->faker->name(),
             'course' => "Test Course",
             'year_lvl' => $this->faker->numberBetween(1, 4),
-            'campus' => "Test Campus",
+            'department' => "Test Department",
         ];
     }
 }

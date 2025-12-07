@@ -40,7 +40,7 @@ class StudentController extends Controller
             'name'       => 'required|string|max:255',
             'course'     => 'required|string|max:100',
             'year_lvl'   => 'required|integer|min:1|max:10',
-            'campus'     => 'required|string|max:100',
+            'department'     => 'required|string|max:100',
         ]);
 
         $student = DB::transaction(function () use ($validated) {
@@ -78,7 +78,7 @@ class StudentController extends Controller
             'name'       => 'sometimes|required|string|max:255',
             'course'     => 'sometimes|required|string|max:100',
             'year_lvl'   => 'sometimes|required|integer|min:1|max:10',
-            'campus'     => 'sometimes|required|string|max:100',
+            'department'     => 'sometimes|required|string|max:100',
         ]);
 
         $student = Student::find($id);
@@ -134,7 +134,7 @@ class StudentController extends Controller
             'data.*.name'       => 'required',
             'data.*.course'     => 'required',
             'data.*.year_lvl'   => 'required|integer',
-            'data.*.campus'     => 'required',
+            'data.*.department'     => 'required',
         ]);
 
         DB::transaction(function () use ($request) {
@@ -145,7 +145,7 @@ class StudentController extends Controller
                     'name'       => $row['name'],
                     'course'     => $row['course'],
                     'year_lvl'   => $row['year_lvl'],
-                    'campus'     => $row['campus'],
+                    'department'     => $row['department'],
                     // user_id is automatically handled by the Observer
                 ]);
             }

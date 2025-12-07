@@ -32,7 +32,7 @@
             <span class="year-badge">Year {{ slotProps.data.year_lvl }}</span>
           </template>
         </Column>
-        <Column field="campus" header="Campus" sortable style="width: 15%"></Column>
+        <Column field="Department" header="Department" sortable style="width: 15%"></Column>
       </DataTable>
     </div>
 
@@ -65,8 +65,8 @@
         </div>
 
         <div class="field">
-          <label>Campus</label>
-          <InputText v-model="form.campus" placeholder="Main Campus" required />
+          <label>Department</label>
+          <InputText v-model="form.department" placeholder="Department" required />
         </div>
 
         <div class="dialog-footer">
@@ -94,13 +94,13 @@ const emit = defineEmits(['refresh']);
 const showModal = ref(false);
 const isSubmitting = ref(false);
 const fileInput = ref(null);
-const form = reactive({ student_id: '', name: '', course: '', year_lvl: 1, campus: '' });
+const form = reactive({ student_id: '', name: '', course: '', year_lvl: 1, department: '' });
 
 async function submitStudent() {
   isSubmitting.value = true;
   try {
     await api.post('/students', form);
-    Object.assign(form, { student_id: '', lrn: '', name: '', course: '', year_lvl: 1, campus: '' });
+    Object.assign(form, { student_id: '', lrn: '', name: '', course: '', year_lvl: 1, department: '' });
     showModal.value = false;
     emit('refresh');
     alert('Student added successfully!');

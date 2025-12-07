@@ -15,7 +15,7 @@ class Student extends Model
         'name',
         'course',
         'year_lvl',
-        'campus'
+        'department'
     ];
     public function user()
     {
