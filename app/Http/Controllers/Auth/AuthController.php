@@ -30,11 +30,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'User registered successfully',
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email
-            ]
+            'user' => $user
         ], 201);
     }
 
@@ -58,16 +54,15 @@ class AuthController extends Controller
         // 4. Generate Token
         $token = $user->createToken('auth_token')->plainTextToken;
 
+        // 5. CRITICAL: Load the student relationship
+        // This ensures frontend gets auth.user.student.student_id
+        $user->load('student');
+
         return response()->json([
             'message' => 'Login successful as '. $user->name,
             'access_token' => $token,
             'token_type' => 'Bearer',
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'is_admin' => $user->is_admin,
-            ],
+            'user' => $user, // Return the full object with relationship loaded
         ]);
     }
 

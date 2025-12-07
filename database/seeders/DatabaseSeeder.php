@@ -10,34 +10,32 @@ use Database\Seeders\StudentSeeder;
 
 class DatabaseSeeder extends Seeder
 {
-    /**
-     * Seed the application's database.
-     */
     public function run()
     {
-        // Create 2 users: one admin and one regular
-        $adminUser = \App\Models\User::factory()->admin()->create([
+        // 1. Create the Admin (Keep this)
+        User::factory()->create([
             'name' => 'Admin User',
             'email' => 'admin@example.com',
+            'is_admin' => true, // Assuming you handle admin flag here
         ]);
 
-        $regularUser = \App\Models\User::factory()->create([
-            'name' => 'Regular User',
-            'email' => 'user@example.com',
-        ]);
+        // REMOVED: $regularUser creation. 
+        // We want the students to generate their own User accounts via the Observer.
 
-        // Create 1 student tied to the regular user
+        // 2. Create Mitz Ignacio
+        // DO NOT pass 'user_id'. The Observer will create the user '23-0613'.
         \App\Models\Student::factory()->create([
-            'user_id' => $regularUser->id,
             'student_id' => '23-0613',
+            'lrn' => '103298100017',
             'name' => 'Mitz Ignacio',
             'course' => 'BSIT',
             'year_lvl' => 3,
             'department' => 'CCSICT',
         ]);
 
+        // 3. Create Shaine Paolo Valdez
+        // DO NOT pass 'user_id'. The Observer will create the user '23-0622'.
         \App\Models\Student::factory()->create([
-            'user_id' => $regularUser->id,
             'student_id' => '23-0622',
             'name' => 'Shaine Paolo Valdez',
             'course' => 'BSIT',
@@ -51,5 +49,4 @@ class DatabaseSeeder extends Seeder
             ParticipationSeeder::class,
         ]);
     }
-
 }
