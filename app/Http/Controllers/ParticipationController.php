@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Participation;
 use Illuminate\Support\Facades\DB;
+use App\Models\Student;
+use App\Models\Event;
+
 
 class ParticipationController extends Controller
 {
@@ -17,7 +20,7 @@ class ParticipationController extends Controller
         // 'through' allows transforming the data without losing pagination metadata
         $participations = Participation::with(['student', 'event'])
             ->orderBy('time_in', 'desc')
-            ->paginate(15) 
+            ->paginate(15)
             ->through(function ($p) {
                 return [
                     'id' => $p->id,
@@ -107,7 +110,7 @@ class ParticipationController extends Controller
 
         return DB::transaction(function () use ($request) {
             $user = $request->user();
-            
+
             $participation = Participation::where('student_id', $user->student->id)
                 ->where('event_id', $request->event_id)
                 ->lockForUpdate()
