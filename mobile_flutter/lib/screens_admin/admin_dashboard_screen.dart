@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../providers/dashboard_provider.dart';
+import '../models/event_model.dart';
+import 'admin_event_management_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -14,88 +17,102 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<DashboardProvider>().loadDashboardData();
+      final dashboardProvider = context.read<DashboardProvider>();
+      dashboardProvider.loadDashboardData();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<DashboardProvider>();
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
-    return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: () => provider.loadDashboardData(),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'System Overview',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
+    return Scaffold(body: _buildDashboardTab(theme, colorScheme));
+  }
 
-              GridView.count(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                childAspectRatio: 1.3,
-                children: [
-                  _buildAdminStat(
-                    theme,
-                    'Total Events',
-                    '${provider.eventsCount}',
-                    Icons.event,
-                    Colors.blue,
-                  ),
-                  _buildAdminStat(
-                    theme,
-                    'Active Users',
-                    '1,240',
-                    Icons.people,
-                    Colors.orange,
-                  ),
-                  _buildAdminStat(
-                    theme,
-                    'Total Scans',
-                    '${provider.scansCount}',
-                    Icons.qr_code_scanner,
-                    Colors.green,
-                  ),
-                  _buildAdminStat(
-                    theme,
-                    'Pending Requests',
-                    '5',
-                    Icons.notifications_active,
-                    Colors.red,
-                  ),
-                ],
-              ),
+  Widget _buildDashboardTab(ThemeData theme, ColorScheme colorScheme) {
+    final provider = context.watch<DashboardProvider>();
+    final textTheme = theme.textTheme;
 
-              const SizedBox(height: 24),
-              Text(
-                'Recent Activity',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+    return RefreshIndicator(
+      onRefresh: () => provider.loadDashboardData(),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Dashboard Overview',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface,
               ),
-              const Card(
-                margin: EdgeInsets.only(top: 8),
-                child: ListTile(
-                  leading: Icon(Icons.info_outline),
-                  title: Text("System check complete"),
-                  subtitle: Text("All services operational"),
+            ),
+            const SizedBox(height: 16),
+
+            GridView.count(
+              crossAxisCount: 2,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              childAspectRatio: 1.2,
+              children: [
+                _buildAdminStat(
+                  theme,
+                  'Total Events',
+                  '${provider.eventsCount}',
+                  Icons.event_note,
+                  colorScheme.primary,
                 ),
+                _buildAdminStat(
+                  theme,
+                  'Total Participations',
+                  '${provider.participationsCount}',
+                  Icons.group_add,
+                  colorScheme.tertiary,
+                ),
+                _buildAdminStat(
+                  theme,
+                  'Active Scans Today',
+                  '${provider.scansCount}',
+                  Icons.qr_code_scanner,
+                  colorScheme.secondary,
+                ),
+                _buildAdminStat(
+                  theme,
+                  'Events This Week',
+                  '${_getUpcomingEventsCount(provider.recentEvents)}',
+                  Icons.calendar_today,
+                  Colors.purple.shade600,
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 32),
+
+            Text(
+              'Recent Events',
+              style: textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface,
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 12),
+
+            if (provider.recentEvents.isEmpty)
+              _buildEmptyState(
+                theme,
+                icon: Icons.event_busy,
+                title: "No recent events",
+                subtitle: "Create your first event to get started",
+              )
+            else
+              ...provider.recentEvents
+                  .take(5)
+                  .map((event) => _buildEventCard(theme, event, provider)),
+          ],
         ),
       ),
     );
@@ -106,48 +123,181 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     String title,
     String value,
     IconData icon,
-    Color color,
+    Color iconColor,
   ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.outlineVariant),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Icon(icon, color: color, size: 28),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+    final colorScheme = theme.colorScheme;
+    return Card(
+      elevation: 4,
+      color: colorScheme.surfaceContainerHigh,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: iconColor.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
               ),
-              Text(
-                title,
-                style: TextStyle(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  fontSize: 12,
+              child: Icon(icon, color: iconColor, size: 28),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: theme.textTheme.headlineLarge?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    color: colorScheme.onSurface,
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
+                Text(
+                  title,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  Widget _buildEventCard(
+    ThemeData theme,
+    Event event,
+    DashboardProvider provider,
+  ) {
+    final colorScheme = theme.colorScheme;
+    // Updated to use DateFormat for consistency
+    final formattedDateTime = DateFormat(
+      'MMM d, yyyy at h:mm a',
+    ).format(event.timeStart);
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      elevation: 1,
+      color: colorScheme.surfaceContainerLow,
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                event.location != null ? Icons.location_on : Icons.event,
+                color: colorScheme.onPrimaryContainer,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    event.title,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    formattedDateTime,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${provider.eventParticipations[event.id] ?? 0} participants',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            if (event.timeStart.isAfter(DateTime.now()))
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: colorScheme.tertiaryContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Upcoming',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: colorScheme.onTertiaryContainer,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(
+    ThemeData theme, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    final colorScheme = theme.colorScheme;
+    return Card(
+      elevation: 0,
+      color: colorScheme.surfaceContainerLow,
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 50, color: colorScheme.outline),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              subtitle,
+              style: theme.textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  int _getUpcomingEventsCount(List<Event> events) {
+    final now = DateTime.now();
+    final weekFromNow = now.add(const Duration(days: 7));
+
+    return events.where((event) {
+      return event.timeStart.isAfter(now) &&
+          event.timeStart.isBefore(weekFromNow);
+    }).length;
   }
 }

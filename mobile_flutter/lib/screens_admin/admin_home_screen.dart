@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'admin_dashboard_screen.dart'; // We will create this next
-import 'admin_event_management_screen.dart'; // We will create this next
-import '../screens/qr_scanner_screen.dart'; // Admin uses scanner for participation
-import 'profile_screen.dart'; // We can reuse this with small tweaks
+import 'admin_dashboard_screen.dart';
+import 'admin_event_management_screen.dart';
+import 'admin_students_screen.dart';
+import 'profile_screen.dart';
 
 class AdminHomeScreen extends StatefulWidget {
   const AdminHomeScreen({super.key});
@@ -15,27 +15,43 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   int _selectedIndex = 0;
 
   final List<Widget> _screens = [
-    const AdminDashboardScreen(), // New Admin Dashboard
-    const EventListScreen(), // CRUD for Events
-    const QRScannerScreen(), // Scan QR Codes for participation
+    const AdminDashboardScreen(),
+    const AdminEventManagementScreen(),
+    const AdminStudentsScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'ADMIN PORTAL',
-          style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2),
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.5,
+            color: colorScheme.primary,
+          ),
         ),
+        elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.account_circle),
+            icon: CircleAvatar(
+              radius: 18,
+              backgroundColor: colorScheme.secondaryContainer,
+              child: Icon(
+                Icons.person,
+                size: 20,
+                color: colorScheme.onSecondaryContainer,
+              ),
+            ),
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const ProfileScreen()),
             ),
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: _screens[_selectedIndex],
@@ -43,11 +59,12 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) =>
             setState(() => _selectedIndex = index),
+        elevation: 4,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.analytics_outlined),
             selectedIcon: Icon(Icons.analytics),
-            label: 'Overview',
+            label: 'Dashboard',
           ),
           NavigationDestination(
             icon: Icon(Icons.edit_calendar_outlined),
@@ -55,9 +72,9 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             label: 'Manage Events',
           ),
           NavigationDestination(
-            icon: Icon(Icons.qr_code_2),
-            selectedIcon: Icon(Icons.qr_code),
-            label: 'Generate QR',
+            icon: Icon(Icons.people_outlined),
+            selectedIcon: Icon(Icons.people),
+            label: 'Students',
           ),
         ],
       ),

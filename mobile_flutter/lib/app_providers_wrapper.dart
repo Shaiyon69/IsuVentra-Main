@@ -7,6 +7,7 @@ import 'providers/auth_provider.dart';
 import 'providers/event_provider.dart';
 import 'providers/dashboard_provider.dart';
 import 'providers/participation_provider.dart';
+import 'providers/student_provider.dart';
 
 // Import Screens
 import 'auth/login.dart';
@@ -27,6 +28,7 @@ class MainApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => EventProvider()),
         ChangeNotifierProvider(create: (_) => ParticipationProvider()),
         ChangeNotifierProvider(create: (_) => DashboardProvider()),
+        ChangeNotifierProvider(create: (_) => StudentProvider()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

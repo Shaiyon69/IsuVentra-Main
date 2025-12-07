@@ -2,16 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/event_provider.dart';
-import 'qr_scanner_screen.dart';
+import '../models/event_model.dart';
+import 'student_qr_code_screen.dart';
+import 'view_event.dart';
 
 class EventListScreen extends StatefulWidget {
-  const EventListScreen({super.key});
+  final VoidCallback? onSwitchToQR;
+
+  const EventListScreen({super.key, this.onSwitchToQR});
 
   @override
   State<EventListScreen> createState() => _EventListScreenState();
 }
 
 class _EventListScreenState extends State<EventListScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
   @override
   void initState() {
     super.initState();
@@ -21,9 +28,25 @@ class _EventListScreenState extends State<EventListScreen> {
   }
 
   @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final provider = Provider.of<EventProvider>(context);
     final events = provider.events;
+    final filteredEvents =
+        events
+            .where(
+              (event) => event.title.toLowerCase().contains(
+                _searchQuery.toLowerCase(),
+              ),
+            )
+            .toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt))
+          ..take(10).toList();
 
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -53,102 +76,220 @@ class _EventListScreenState extends State<EventListScreen> {
       );
     }
 
-    if (events.isEmpty) {
-      return const Center(child: Text('No events available'));
-    }
-
-    return RefreshIndicator(
-      onRefresh: () => provider.fetchEvents(),
-      child: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: events.length,
-        separatorBuilder: (context, index) => const SizedBox(height: 12),
-        itemBuilder: (context, index) {
-          final event = events[index];
-
-          return Card(
-            elevation: 0,
-            color: colorScheme.surface,
-            shape: RoundedRectangleBorder(
-              side: BorderSide(color: colorScheme.outlineVariant),
-              borderRadius: BorderRadius.circular(12),
+    return Scaffold(
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search events...',
+                prefixIcon: Icon(
+                  Icons.search,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                filled: true,
+                fillColor: colorScheme.surfaceContainerLow,
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 10,
+                  horizontal: 16,
+                ),
+              ),
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value;
+                });
+              },
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    event.title,
-                    style: textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  if (event.description != null)
-                    Text(
-                      event.description!,
-                      style: textTheme.bodyMedium?.copyWith(
+          ),
+          Expanded(
+            child: filteredEvents.isEmpty
+                ? Center(
+                    child: Text(
+                      _searchQuery.isEmpty
+                          ? 'No events available'
+                          : 'No events found for "$_searchQuery"',
+                      style: textTheme.titleMedium?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
                     ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.access_time,
-                        size: 18,
-                        color: colorScheme.primary,
+                  )
+                : RefreshIndicator(
+                    onRefresh: () => provider.fetchEvents(),
+                    child: ListView.separated(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        "${DateFormat('MMM d, h:mm a').format(event.timeStart)} - ${DateFormat('h:mm a').format(event.timeEnd)}",
-                        style: textTheme.bodyMedium,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  if (event.location != null)
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.location_on_outlined,
-                          size: 18,
-                          color: colorScheme.primary,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(event.location!, style: textTheme.bodyMedium),
-                      ],
-                    ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.tonal(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const QRScannerScreen(),
-                          ),
-                        );
+                      itemCount: filteredEvents.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 16),
+                      itemBuilder: (context, index) {
+                        final event = filteredEvents[index];
+                        return _buildEventCard(theme, event);
                       },
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.qr_code_scanner, size: 20),
-                          SizedBox(width: 8),
-                          Text('Participate'),
-                        ],
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEventCard(ThemeData theme, dynamic event) {
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
+    final isUpcoming = event.timeStart.isAfter(DateTime.now());
+    final statusColor = isUpcoming
+        ? colorScheme.secondary
+        : colorScheme.outline;
+
+    return Card(
+      elevation: 2,
+      color: colorScheme.surfaceContainerHigh,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              event.title,
+              style: textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: colorScheme.onSurface,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 8),
+
+            if (event.description != null) ...[
+              Text(
+                event.description!,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            Row(
+              children: [
+                Icon(Icons.calendar_month, size: 16, color: statusColor),
+                const SizedBox(width: 6),
+                Text(
+                  DateFormat('MMM d, yyyy').format(event.timeStart),
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurface,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Icon(Icons.access_time, size: 16, color: statusColor),
+                const SizedBox(width: 6),
+                Text(
+                  "${DateFormat('h:mm a').format(event.timeStart)} - ${DateFormat('h:mm a').format(event.timeEnd)}",
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurface,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+
+            if (event.location != null) ...[
+              Row(
+                children: [
+                  Icon(
+                    Icons.location_on_outlined,
+                    size: 16,
+                    color: statusColor,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      event.location!,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurface,
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
               ),
+              const SizedBox(height: 16),
+            ] else
+              const SizedBox(height: 10),
+
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: colorScheme.primary,
+                      side: BorderSide(color: colorScheme.primary),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              ViewEventScreen(event: event as Event),
+                        ),
+                      );
+                    },
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.visibility, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'View',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: colorScheme.primary,
+                      foregroundColor: colorScheme.onPrimary,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    onPressed: () {
+                      widget.onSwitchToQR?.call();
+                    },
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.qr_code, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'Participate',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-          );
-        },
+          ],
+        ),
       ),
     );
   }
