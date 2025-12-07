@@ -2,7 +2,7 @@ class User {
   final int id;
   final String name;
   final String email;
-  final bool isAdmin;
+  final int adminLevel; // 0: user, 1: super admin, 2: admin
 
   final String? studentId;
   final String? course;
@@ -13,7 +13,7 @@ class User {
     required this.id,
     required this.name,
     required this.email,
-    required this.isAdmin,
+    required this.adminLevel,
 
     this.studentId,
     this.course,
@@ -26,7 +26,7 @@ class User {
       id: json['id'],
       name: json['name'],
       email: json['email'],
-      isAdmin: json['is_admin'] == 1 || json['is_admin'] == true,
+      adminLevel: json['is_admin'] ?? 0,
 
       studentId: json['student_id'],
       course: json['course'],

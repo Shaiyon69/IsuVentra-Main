@@ -141,6 +141,7 @@ class _AdminQRScannerScreenState extends State<AdminQRScannerScreen> {
           await participationProvider.adminRecordParticipation(
             student.id,
             widget.event!.id,
+            studentName: student.name,
           );
 
           if (mounted) {

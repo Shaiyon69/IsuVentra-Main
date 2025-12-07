@@ -20,7 +20,20 @@ class EventProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final List<dynamic> data = await _api.get('/events');
+      final response = await _api.get('/events');
+
+      // Handle paginated response
+      List<dynamic> data;
+      if (response is Map && response.containsKey('data')) {
+        // If response is paginated, extract the 'data' array
+        data = response['data'] as List<dynamic>;
+      } else if (response is List) {
+        // If response is already a list, use it directly
+        data = response;
+      } else {
+        throw Exception('Unexpected response format');
+      }
+
       _events = data.map((json) => Event.fromJson(json)).toList();
     } catch (e) {
       debugPrint("Event Error: $e");
@@ -42,7 +55,6 @@ class EventProvider with ChangeNotifier {
         'time_start': DateFormat('yyyy-MM-dd HH:mm:ss').format(event.timeStart),
         'time_end': DateFormat('yyyy-MM-dd HH:mm:ss').format(event.timeEnd),
         'location': event.location,
-        'creator_id': event.creatorId,
       });
       await fetchEvents(); // Refresh the events list
     } catch (e) {

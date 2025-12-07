@@ -105,6 +105,7 @@ class _EventCreationScreenState extends State<EventCreationScreen> {
       description: _description,
       location: _location,
       createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
     );
 
     final eventProvider = context.read<EventProvider>();

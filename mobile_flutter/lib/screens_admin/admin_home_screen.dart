@@ -69,12 +69,12 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           NavigationDestination(
             icon: Icon(Icons.edit_calendar_outlined),
             selectedIcon: Icon(Icons.edit_calendar),
-            label: 'Manage Events',
+            label: 'Events',
           ),
           NavigationDestination(
             icon: Icon(Icons.people_outlined),
             selectedIcon: Icon(Icons.people),
-            label: 'Students',
+            label: 'Participations',
           ),
         ],
       ),

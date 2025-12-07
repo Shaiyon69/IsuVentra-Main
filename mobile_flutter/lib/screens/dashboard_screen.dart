@@ -2,14 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/dashboard_provider.dart';
-import '../providers/auth_provider.dart';
-import '../models/event_model.dart';
-import 'event_list_screen.dart';
 import 'view_event.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
-
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
@@ -30,12 +26,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final textTheme = theme.textTheme;
     final provider = context.watch<DashboardProvider>();
 
-    // Filter events to only show upcoming ones for the Student Dashboard
-    final upcomingEvents = provider.recentEvents
-        .where((event) => event.timeStart.isAfter(DateTime.now()))
-        .toList();
-    // Sort by timeStart for a better user experience
-    upcomingEvents.sort((a, b) => a.timeStart.compareTo(b.timeStart));
+    // Show recent events (most recently created first)
+    final eventsToShow = provider.recentEvents.toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
     return Scaffold(
       body: RefreshIndicator(
@@ -57,13 +50,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'My Summary',
-                        style: textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: colorScheme.onSurface,
-                        ),
-                      ),
                       const SizedBox(height: 24),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -104,7 +90,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(height: 32),
 
               Text(
-                'Upcoming Events',
+                'Recent Events',
                 style: textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: colorScheme.onSurface,
@@ -116,12 +102,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Center(
                   child: CircularProgressIndicator(color: colorScheme.primary),
                 )
-              else if (upcomingEvents.isEmpty)
+              else if (eventsToShow.isEmpty)
                 Padding(
                   padding: const EdgeInsets.all(20),
                   child: Center(
                     child: Text(
-                      "No upcoming events.",
+                      "No upcoming or ongoing events.",
                       style: theme.textTheme.bodyLarge?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
@@ -129,7 +115,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 )
               else
-                _buildUpcomingEvents(context, upcomingEvents),
+                _buildUpcomingEvents(context, eventsToShow),
 
               const SizedBox(height: 24),
             ],
@@ -154,7 +140,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: iconColor.withOpacity(0.12),
+            color: iconColor.withValues(alpha: 0.12),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, size: 30, color: iconColor),
@@ -263,10 +249,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ],
               ),
             ),
-            trailing: Icon(
-              Icons.arrow_forward_ios,
-              size: 16,
-              color: colorScheme.outline,
+            trailing: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                const SizedBox(height: 8),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: colorScheme.outline,
+                ),
+              ],
             ),
             onTap: () {
               Navigator.push(

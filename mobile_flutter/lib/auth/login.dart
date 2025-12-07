@@ -40,14 +40,15 @@ class _LoginState extends State<Login> {
       if (!mounted) return;
 
       if (isLoggedIn) {
-        _navigateBasedOnRole(auth.user?.isAdmin ?? false);
+        _navigateBasedOnRole(auth.user?.adminLevel ?? 0);
       } else {
         setState(() => _isCheckingAuth = false);
       }
     });
   }
 
-  void _navigateBasedOnRole(bool isAdmin) {
+  void _navigateBasedOnRole(int adminLevel) {
+    final isAdmin = adminLevel > 0;
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -73,8 +74,8 @@ class _LoginState extends State<Login> {
     if (!mounted) return;
 
     if (success) {
-      final isAdmin = auth.user?.isAdmin ?? false;
-      _navigateBasedOnRole(isAdmin);
+      final adminLevel = auth.user?.adminLevel ?? 0;
+      _navigateBasedOnRole(adminLevel);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -223,7 +224,7 @@ class _LoginState extends State<Login> {
                                           : 'Student ID',
                                       hintText: _isAdminLogin
                                           ? 'admin@isu.edu.ph'
-                                          : '23-XXXX',
+                                          : '25-XXXX',
                                       border: const OutlineInputBorder(),
                                     ),
                                     validator: (value) {

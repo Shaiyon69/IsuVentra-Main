@@ -41,7 +41,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('participations/{id}', [ParticipationController::class, 'show']);
     });
     // User Profile
-    //Code requred for Flutter 
+    //Code requred for Flutter
     Route::get('user', function (Request $request) {
         $user = $request->user();
         $user->loadMissing('student');
@@ -50,7 +50,7 @@ Route::middleware('auth:sanctum')->group(function () {
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
-            'is_admin' => $user->is_admin, 
+            'is_admin' => $user->is_admin,
         ];
 
         if ($user->student) {
@@ -58,7 +58,7 @@ Route::middleware('auth:sanctum')->group(function () {
             $response['student_id'] = $student->student_id;
             $response['course'] = $student->course;
             $response['year_level'] = $student->year_lvl;
-            $response['campus'] = $student->campus;
+            $response['department'] = $student->department;
         }
 
         return response()->json($response);
@@ -113,6 +113,6 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete('students/{id}', 'destroy');
         });
 
-    }); 
+    });
 
 });

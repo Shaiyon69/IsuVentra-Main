@@ -6,7 +6,7 @@ class Event {
   final DateTime timeEnd;
   final String? location;
   final DateTime createdAt;
-  final int? creatorId;
+  final DateTime updatedAt;
 
   Event({
     required this.id,
@@ -16,7 +16,7 @@ class Event {
     required this.timeEnd,
     this.location,
     required this.createdAt,
-    this.creatorId,
+    required this.updatedAt,
   });
 
   factory Event.fromJson(Map<String, dynamic> json) {
@@ -28,7 +28,7 @@ class Event {
       timeEnd: DateTime.parse(json['time_end']),
       location: json['location'],
       createdAt: DateTime.parse(json['created_at']),
-      creatorId: json['creator_id'],
+      updatedAt: DateTime.parse(json['updated_at']),
     );
   }
 }

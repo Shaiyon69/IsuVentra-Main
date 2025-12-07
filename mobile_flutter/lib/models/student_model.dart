@@ -5,7 +5,7 @@ class Student {
   final String name;
   final String course;
   final String yearLevel;
-  final String campus;
+  final String department;
 
   Student({
     required this.id,
@@ -14,7 +14,7 @@ class Student {
     required this.name,
     required this.course,
     required this.yearLevel,
-    required this.campus,
+    required this.department,
   });
 
   factory Student.fromJson(Map<String, dynamic> json) {
@@ -25,7 +25,7 @@ class Student {
       name: json['name'],
       course: json['course'],
       yearLevel: json['year_lvl'].toString(),
-      campus: json['campus'],
+      department: json['department'],
     );
   }
 }

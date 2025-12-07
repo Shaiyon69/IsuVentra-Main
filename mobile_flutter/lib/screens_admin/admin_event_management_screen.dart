@@ -6,7 +6,6 @@ import '../models/event_model.dart';
 import 'admin_qr_scanner_screen.dart';
 import 'event_creation_screen.dart';
 import 'event_attendees_screen.dart';
-import '../screens/view_event.dart';
 
 class AdminEventManagementScreen extends StatefulWidget {
   final bool limitTo10;
@@ -60,10 +59,9 @@ class _AdminEventManagementScreenState
     final textTheme = theme.textTheme;
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: _navigateToCreateEvent,
-        icon: const Icon(Icons.add),
-        label: const Text('New Event'),
+        child: const Icon(Icons.add),
       ),
       body: Column(
         children: [
@@ -151,7 +149,7 @@ class _AdminEventManagementScreenState
               const SizedBox(height: 8),
               Text(
                 _searchQuery.isEmpty
-                    ? 'Tap the "New Event" button to get started.'
+                    ? 'Tap the "+" button to get started.'
                     : 'No events found for "$_searchQuery".',
                 textAlign: TextAlign.center,
                 style: textTheme.bodyMedium,
@@ -319,7 +317,7 @@ class _AdminEventManagementScreenState
                         Icon(Icons.qr_code_scanner, size: 20),
                         SizedBox(width: 8),
                         Text(
-                          'Scan Attendance',
+                          'Scan',
                           style: TextStyle(fontWeight: FontWeight.w600),
                         ),
                       ],

@@ -49,7 +49,7 @@ class EventController extends Controller
         $events = Event::select('id', 'title')
             ->orderBy('title')
             ->get();
-            
+
         return response()->json($events);
     }
 

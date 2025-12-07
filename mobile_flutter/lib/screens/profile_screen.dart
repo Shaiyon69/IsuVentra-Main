@@ -94,7 +94,7 @@ class ProfileScreen extends StatelessWidget {
                     _buildInfoCard(
                       context,
                       Icons.location_on,
-                      'Campus',
+                      'Department',
                       user.department ?? 'N/A',
                     ),
 

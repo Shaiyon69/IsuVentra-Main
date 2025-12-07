@@ -3,8 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/event_provider.dart';
 import '../models/event_model.dart';
-import 'student_qr_code_screen.dart';
 import 'view_event.dart';
+
+enum SortMode { upcoming, ongoing, finished }
 
 class EventListScreen extends StatefulWidget {
   final VoidCallback? onSwitchToQR;
@@ -37,20 +38,21 @@ class _EventListScreenState extends State<EventListScreen> {
   Widget build(BuildContext context) {
     final provider = Provider.of<EventProvider>(context);
     final events = provider.events;
-    final filteredEvents =
-        events
-            .where(
-              (event) => event.title.toLowerCase().contains(
-                _searchQuery.toLowerCase(),
-              ),
-            )
-            .toList()
-          ..sort((a, b) => b.createdAt.compareTo(a.createdAt))
-          ..take(10).toList();
-
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
+
+    // Base filter by search
+    List<Event> base = events
+        .where(
+          (event) =>
+              event.title.toLowerCase().contains(_searchQuery.toLowerCase()),
+        )
+        .toList();
+
+    // Simple search + recent sorting (most recently created first), limit 10
+    base.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final filteredEvents = base.take(10).toList();
 
     if (provider.isLoading) {
       return Center(
@@ -106,6 +108,7 @@ class _EventListScreenState extends State<EventListScreen> {
               },
             ),
           ),
+          const SizedBox(height: 8),
           Expanded(
             child: filteredEvents.isEmpty
                 ? Center(
