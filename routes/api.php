@@ -30,6 +30,13 @@ Route::controller(AuthController::class)->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
 
     // COMMON ROUTES
+
+     Route::controller(ParticipationController::class)->group(function () {
+        Route::post('/participations/scan', 'scan');
+        Route::post('/participations/out', 'timeOut');
+        Route::get('/participations/status', 'checkStatus');
+    });
+
     Route::name('api.')->group(function () {
         Route::get('students', [StudentController::class, 'index']);
         Route::get('students/{id}', [StudentController::class, 'show']);
@@ -71,10 +78,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 
     // QR Code Actions (Students need this)
-    Route::controller(ParticipationController::class)->group(function () {
-        Route::post('/participations/scan', 'scan');
-        Route::post('/participations/out', 'timeOut');
-    });
+   
 
 
     //ADMIN EXCLUSIVE ROUTES
