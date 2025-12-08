@@ -47,7 +47,6 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
     }).toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Students')),
       body: RefreshIndicator(
         onRefresh: () async {
           await dashboard.loadDashboardData();
@@ -64,7 +63,7 @@ class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
                   controller: _searchController,
                   decoration: const InputDecoration(
                     prefixIcon: Icon(Icons.search),
-                    hintText: 'Search events',
+                    hintText: 'Search events to view attendees',
                   ),
                 ),
               );

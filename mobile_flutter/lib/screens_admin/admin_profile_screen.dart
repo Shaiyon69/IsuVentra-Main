@@ -36,7 +36,7 @@ class ProfileScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     Text(
                       user.name,
                       style: textTheme.headlineSmall?.copyWith(
@@ -45,12 +45,60 @@ class ProfileScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      user.email,
+                      user.studentId ?? 'Student ID: N/A',
                       style: textTheme.titleMedium?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 24),
+
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Student ID',
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildInfoCard(context, Icons.email, 'Email', user.email),
+                    const SizedBox(height: 16),
+
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Details',
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildInfoCard(
+                      context,
+                      Icons.school,
+                      'Course',
+                      user.course ?? 'N/A',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildInfoCard(
+                      context,
+                      Icons.grade,
+                      'Year Level',
+                      user.yearLevel ?? 'N/A',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildInfoCard(
+                      context,
+                      Icons.location_on,
+                      'Department',
+                      user.department ?? 'N/A',
+                    ),
+
+                    const SizedBox(height: 40),
 
                     SizedBox(
                       width: double.infinity,
@@ -86,32 +134,6 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoSection(
-    BuildContext context,
-    String title,
-    List<Widget> children,
-  ) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: colorScheme.primary,
-          ),
-        ),
-        const SizedBox(height: 12),
-        ...children.map(
-          (w) => Padding(padding: const EdgeInsets.only(bottom: 12), child: w),
-        ),
-      ],
-    );
-  }
-
   Widget _buildInfoCard(
     BuildContext context,
     IconData icon,
@@ -124,7 +146,7 @@ class ProfileScreen extends StatelessWidget {
     return Card(
       elevation: 0,
       color: colorScheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         leading: Icon(icon, color: colorScheme.secondary),

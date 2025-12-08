@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'admin_dashboard_screen.dart';
 import 'admin_event_management_screen.dart';
 import 'admin_students_screen.dart';
-import 'profile_screen.dart';
+import 'admin_profile_screen.dart';
 
 class AdminHomeScreen extends StatefulWidget {
   const AdminHomeScreen({super.key});
