@@ -48,8 +48,25 @@
         
         <Column header="Time Out" field="time_out">
           <template #body="slotProps">
-            <span v-if="slotProps.data.time_out">{{ new Date(slotProps.data.time_out).toLocaleString() }}</span>
-            <span v-else class="ongoing-tag">Ongoing</span>
+            <span v-if="slotProps.data.time_out">
+              {{ new Date(slotProps.data.time_out).toLocaleString() }}
+            </span>
+
+            <template v-else>
+              <span 
+                v-if="isEventEnded(slotProps.data.event_end)" 
+                class="status-tag no-timeout"
+              >
+                No Timeout
+              </span>
+
+              <span 
+                v-else 
+                class="status-tag ongoing"
+              >
+                Ongoing
+              </span>
+            </template>
           </template>
         </Column>
       </DataTable>
@@ -165,8 +182,14 @@ const localStudents = ref([]);
 const localEvents = ref([]);
 const filteredStudents = ref([]);
 const selectedStudent = ref(null);
-
 const form = reactive({ event_id: '', time_in: '', time_out: '' });
+
+const isEventEnded = (eventEndDateString) => {
+  if (!eventEndDateString) return false; // Safety check
+  const now = new Date();
+  const eventEnd = new Date(eventEndDateString);
+  return now > eventEnd;
+};
 
 // --- Computed & Methods ---
 const hasNextPage = computed(() => {
@@ -302,4 +325,25 @@ onMounted(loadDropdowns);
 .form-row { display: flex; gap: 1rem; }
 .form-row > * { flex: 1; }
 .dialog-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 1.5rem; }
+
+/* Update your styles */
+
+.status-tag {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-tag.ongoing {
+  background: #dcfce7;
+  color: #166534; /* Green */
+}
+
+.status-tag.no-timeout {
+  background: #fee2e2;
+  color: #991b1b; /* Red */
+}
 </style>

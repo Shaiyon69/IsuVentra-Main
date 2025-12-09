@@ -56,6 +56,8 @@ class ParticipationController extends Controller
                     'student_name' => $p->student ? $p->student->name : 'Unknown', 
                     'student_school_id' => $p->student ? $p->student->student_id : 'N/A',
                     'event_name' => $p->event ? $p->event->title : 'Unknown', 
+                    'event_end' => $p->event ? $p->event->time_end : null,
+                    
                     'time_in' => $p->time_in,
                     'time_out' => $p->time_out,
                 ];
