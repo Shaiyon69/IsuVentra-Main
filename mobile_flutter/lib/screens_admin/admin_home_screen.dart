@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'admin_dashboard_screen.dart';
 import 'admin_event_management_screen.dart';
 import 'admin_students_screen.dart';
-import 'profile_screen.dart';
+import 'admin_profile_screen.dart';
 
 class AdminHomeScreen extends StatefulWidget {
   const AdminHomeScreen({super.key});
@@ -69,12 +69,12 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           NavigationDestination(
             icon: Icon(Icons.edit_calendar_outlined),
             selectedIcon: Icon(Icons.edit_calendar),
-            label: 'Manage Events',
+            label: 'Events',
           ),
           NavigationDestination(
             icon: Icon(Icons.people_outlined),
             selectedIcon: Icon(Icons.people),
-            label: 'Students',
+            label: 'Participations',
           ),
         ],
       ),

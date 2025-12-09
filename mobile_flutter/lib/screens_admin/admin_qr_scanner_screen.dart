@@ -141,6 +141,7 @@ class _AdminQRScannerScreenState extends State<AdminQRScannerScreen> {
           await participationProvider.adminRecordParticipation(
             student.id,
             widget.event!.id,
+            studentName: student.name,
           );
 
           if (mounted) {
@@ -266,8 +267,8 @@ class _AdminQRScannerScreenState extends State<AdminQRScannerScreen> {
         ),
         FilledButton(
           onPressed: () => Navigator.pop(context, true),
-          child: const Text('Confirm Check-in'),
           style: FilledButton.styleFrom(backgroundColor: colorScheme.primary),
+          child: const Text('Confirm Check-in'),
         ),
       ],
     );

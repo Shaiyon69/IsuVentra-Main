@@ -16,10 +16,10 @@ class ProfileScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile'),
+        title: const Text('Admin Profile'),
         centerTitle: true,
-        backgroundColor: Colors.green[250],
-        surfaceTintColor: Colors.green,
+        backgroundColor: colorScheme.surface,
+        surfaceTintColor: Colors.transparent,
       ),
       body: user == null
           ? const Center(child: CircularProgressIndicator())
@@ -27,17 +27,17 @@ class ProfileScreen extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24.0,
-                  vertical: 16.0,
+                  vertical: 24.0,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24),
                     CircleAvatar(
                       radius: 60,
                       backgroundColor: colorScheme.primaryContainer,
                       child: Text(
-                        user.name.isNotEmpty ? user.name[0].toUpperCase() : 'S',
+                        user.name.isNotEmpty ? user.name[0].toUpperCase() : 'A',
                         style: textTheme.displayMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: colorScheme.onPrimaryContainer,
@@ -56,51 +56,34 @@ class ProfileScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
+                        horizontal: 16,
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHighest,
+                        color: colorScheme.primaryContainer.withOpacity(0.5),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        user.email,
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w500,
+                        'Administrator',
+                        style: textTheme.labelLarge?.copyWith(
+                          color: colorScheme.onPrimaryContainer,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 1.0,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 48),
 
-                    _buildInfoSection(context, 'Information', [
+                    _buildInfoSection(context, 'Contact Information', [
                       _buildInfoCard(
                         context,
-                        Icons.badge_outlined,
-                        'Student ID',
-                        user.studentId?.toString() ?? 'N/A',
-                      ),
-                      _buildInfoCard(
-                        context,
-                        Icons.school_outlined,
-                        'Course',
-                        user.course ?? 'N/A',
-                      ),
-                      _buildInfoCard(
-                        context,
-                        Icons.stairs_outlined,
-                        'Year Level',
-                        user.yearLevel?.toString() ?? 'N/A',
-                      ),
-                      _buildInfoCard(
-                        context,
-                        Icons.domain,
-                        'Department',
-                        user.department ?? 'N/A',
+                        Icons.email_outlined,
+                        'Email Address',
+                        user.email,
                       ),
                     ]),
 
-                    const SizedBox(height: 48),
+                    const SizedBox(height: 60),
 
                     SizedBox(
                       width: double.infinity,
@@ -136,7 +119,6 @@ class ProfileScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
                   ],
                 ),
               ),

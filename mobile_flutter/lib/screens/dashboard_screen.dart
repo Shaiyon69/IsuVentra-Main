@@ -2,14 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/dashboard_provider.dart';
-import '../providers/auth_provider.dart';
-import '../models/event_model.dart';
-import 'event_list_screen.dart';
 import 'view_event.dart';
+import '../models/event_model.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
-
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
@@ -23,6 +20,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
+  List<Event> _getStudentActiveEvents(List<Event> allEvents) {
+    final now = DateTime.now();
+    return allEvents.where((event) {
+      return event.timeEnd.isAfter(now);
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -30,12 +34,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final textTheme = theme.textTheme;
     final provider = context.watch<DashboardProvider>();
 
-    // Filter events to only show upcoming ones for the Student Dashboard
-    final upcomingEvents = provider.recentEvents
-        .where((event) => event.timeStart.isAfter(DateTime.now()))
-        .toList();
-    // Sort by timeStart for a better user experience
-    upcomingEvents.sort((a, b) => a.timeStart.compareTo(b.timeStart));
+    final studentEvents = _getStudentActiveEvents(provider.recentEvents);
+
+    studentEvents.sort((a, b) => a.timeStart.compareTo(b.timeStart));
+
+    final activeEventCount = studentEvents.length;
 
     return Scaffold(
       body: RefreshIndicator(
@@ -57,22 +60,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'My Summary',
-                        style: textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: colorScheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
                           Expanded(
                             child: _buildStatCard(
                               context,
-                              'Events',
-                              provider.eventsCount.toString(),
+                              'Active Events',
+                              '$activeEventCount',
                               Icons.event_available,
                               colorScheme.primary,
                             ),
@@ -80,7 +75,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           Expanded(
                             child: _buildStatCard(
                               context,
-                              'Joined',
+                              'Total Joined',
                               provider.participationsCount.toString(),
                               Icons.check_circle,
                               colorScheme.tertiary,
@@ -89,7 +84,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           Expanded(
                             child: _buildStatCard(
                               context,
-                              'Scans',
+                              'Total Scans',
                               provider.scansCount.toString(),
                               Icons.qr_code,
                               colorScheme.secondary,
@@ -104,7 +99,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(height: 32),
 
               Text(
-                'Upcoming Events',
+                'Upcoming & Ongoing',
                 style: textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: colorScheme.onSurface,
@@ -116,20 +111,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Center(
                   child: CircularProgressIndicator(color: colorScheme.primary),
                 )
-              else if (upcomingEvents.isEmpty)
+              else if (studentEvents.isEmpty)
                 Padding(
                   padding: const EdgeInsets.all(20),
                   child: Center(
-                    child: Text(
-                      "No upcoming events.",
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.event_busy,
+                          size: 48,
+                          color: colorScheme.outlineVariant,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          "No active events at the moment.",
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 )
               else
-                _buildUpcomingEvents(context, upcomingEvents),
+                _buildUpcomingEvents(context, studentEvents),
 
               const SizedBox(height: 24),
             ],
@@ -180,7 +185,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildUpcomingEvents(BuildContext context, List<dynamic> events) {
+  Widget _buildUpcomingEvents(BuildContext context, List<Event> events) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
@@ -263,10 +268,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ],
               ),
             ),
-            trailing: Icon(
-              Icons.arrow_forward_ios,
-              size: 16,
-              color: colorScheme.outline,
+            trailing: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                const SizedBox(height: 8),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: colorScheme.outline,
+                ),
+              ],
             ),
             onTap: () {
               Navigator.push(

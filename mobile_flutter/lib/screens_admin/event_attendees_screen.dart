@@ -15,6 +15,8 @@ class EventAttendeesScreen extends StatefulWidget {
 }
 
 class _EventAttendeesScreenState extends State<EventAttendeesScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
   @override
   void initState() {
     super.initState();
@@ -23,7 +25,19 @@ class _EventAttendeesScreenState extends State<EventAttendeesScreen> {
         context,
         listen: false,
       ).fetchParticipations();
+      _searchController.addListener(() {
+        if (!mounted) return;
+        setState(() {
+          _searchQuery = _searchController.text.trim().toLowerCase();
+        });
+      });
     });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -35,7 +49,7 @@ class _EventAttendeesScreenState extends State<EventAttendeesScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Attendees - ${widget.event.title}',
+          widget.event.title,
           style: TextStyle(
             fontWeight: FontWeight.w600,
             color: colorScheme.onSurface,
@@ -74,6 +88,15 @@ class _EventAttendeesScreenState extends State<EventAttendeesScreen> {
             widget.event.id,
           );
 
+          final filteredParticipations = _searchQuery.isEmpty
+              ? eventParticipations
+              : eventParticipations.where((p) {
+                  final q = _searchQuery;
+                  final name = p.studentName.toLowerCase();
+                  final sid = p.studentId.toString().toLowerCase();
+                  return name.contains(q) || sid.contains(q);
+                }).toList();
+
           if (eventParticipations.isEmpty) {
             return Center(
               child: Padding(
@@ -88,7 +111,7 @@ class _EventAttendeesScreenState extends State<EventAttendeesScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'No Attendees Yet',
+                      'No Attendees',
                       style: textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -107,19 +130,44 @@ class _EventAttendeesScreenState extends State<EventAttendeesScreen> {
 
           return RefreshIndicator(
             onRefresh: () => provider.fetchParticipations(),
-            child: ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: eventParticipations.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final participation = eventParticipations[index];
-                return _buildAttendeeCard(
-                  theme,
-                  participation,
-                  colorScheme,
-                  textTheme,
-                );
-              },
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.search),
+                      hintText: 'Search by name or student ID',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      filled: true,
+                      fillColor: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                    itemCount: filteredParticipations.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final participation = filteredParticipations[index];
+                      return _buildAttendeeCard(
+                        theme,
+                        participation,
+                        colorScheme,
+                        textTheme,
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           );
         },
@@ -133,27 +181,36 @@ class _EventAttendeesScreenState extends State<EventAttendeesScreen> {
     ColorScheme colorScheme,
     TextTheme textTheme,
   ) {
+    // Simplified card: avatar, name + ID, times, and compact badges
+    final initials = participation.studentName.isNotEmpty
+        ? participation.studentName
+              .trim()
+              .split(' ')
+              .map((s) => s.isNotEmpty ? s[0] : '')
+              .take(2)
+              .join()
+        : 'S';
+
     return Card(
       elevation: 1,
-      color: colorScheme.surfaceContainerLow,
+      color: colorScheme.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                Icons.person,
-                color: colorScheme.onPrimaryContainer,
-                size: 24,
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: colorScheme.primaryContainer,
+              child: Text(
+                initials,
+                style: textTheme.titleMedium?.copyWith(
+                  color: colorScheme.onPrimaryContainer,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -162,46 +219,107 @@ class _EventAttendeesScreenState extends State<EventAttendeesScreen> {
                     participation.studentName,
                     style: textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: colorScheme.onSurface,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'ID: ${participation.studentId}',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  if (participation.timeIn != null)
-                    Text(
-                      'Checked in: ${DateFormat('MMM d, h:mm a').format(participation.timeIn!)}',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  if (participation.timeOut != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      'Checked out: ${DateFormat('MMM d, h:mm a').format(participation.timeOut!)}',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      if (participation.timeIn != null)
+                        Text(
+                          DateFormat(
+                            "h:mm a",
+                          ).format(participation.timeIn!.toLocal()),
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        )
+                      else
+                        Text(
+                          '-',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      const SizedBox(width: 12),
+                      if (participation.timeOut != null)
+                        Text(
+                          DateFormat(
+                            "h:mm a",
+                          ).format(participation.timeOut!.toLocal()),
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colorScheme.tertiary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        )
+                      else
+                        Text(
+                          '-',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                    ],
+                  ),
                 ],
               ),
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: participation.timeOut != null
-                    ? colorScheme.tertiaryContainer
-                    : colorScheme.secondaryContainer,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                participation.timeOut != null ? 'Completed' : 'Checked In',
-                style: textTheme.labelSmall?.copyWith(
-                  color: participation.timeOut != null
-                      ? colorScheme.onTertiaryContainer
-                      : colorScheme.onSecondaryContainer,
-                  fontWeight: FontWeight.bold,
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 6,
+                  ),
+                  margin: const EdgeInsets.only(bottom: 6),
+                  decoration: BoxDecoration(
+                    color: participation.timeIn != null
+                        ? colorScheme.secondaryContainer
+                        : colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'IN',
+                    style: textTheme.labelSmall?.copyWith(
+                      color: participation.timeIn != null
+                          ? colorScheme.onSecondaryContainer
+                          : colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
-              ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: participation.timeOut != null
+                        ? colorScheme.tertiaryContainer
+                        : colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'OUT',
+                    style: textTheme.labelSmall?.copyWith(
+                      color: participation.timeOut != null
+                          ? colorScheme.onTertiaryContainer
+                          : colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/dashboard_provider.dart';
+import '../providers/auth_provider.dart';
+import '../models/user_model.dart';
 import '../models/event_model.dart';
-import 'admin_event_management_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -17,102 +18,111 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final dashboardProvider = context.read<DashboardProvider>();
-      dashboardProvider.loadDashboardData();
+      _loadData();
     });
+  }
+
+  void _loadData() {
+    final user = context.read<AuthProvider>().user;
+    // Pass user ID and role to filter dashboard data (Events, Stats)
+    context.read<DashboardProvider>().loadDashboardData(
+      userId: user?.id,
+      role: user?.role,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-
-    return Scaffold(body: _buildDashboardTab(theme, colorScheme));
-  }
-
-  Widget _buildDashboardTab(ThemeData theme, ColorScheme colorScheme) {
-    final provider = context.watch<DashboardProvider>();
     final textTheme = theme.textTheme;
+    final provider = context.watch<DashboardProvider>();
 
-    return RefreshIndicator(
-      onRefresh: () => provider.loadDashboardData(),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        physics: const AlwaysScrollableScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Dashboard Overview',
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: colorScheme.onSurface,
+    return Scaffold(
+      body: RefreshIndicator(
+        onRefresh: () async => _loadData(),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Dashboard Overview',
+                style: textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            GridView.count(
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              childAspectRatio: 1.2,
-              children: [
-                _buildAdminStat(
-                  theme,
-                  'Total Events',
-                  '${provider.eventsCount}',
-                  Icons.event_note,
-                  colorScheme.primary,
-                ),
-                _buildAdminStat(
-                  theme,
-                  'Total Participations',
-                  '${provider.participationsCount}',
-                  Icons.group_add,
-                  colorScheme.tertiary,
-                ),
-                _buildAdminStat(
-                  theme,
-                  'Active Scans Today',
-                  '${provider.scansCount}',
-                  Icons.qr_code_scanner,
-                  colorScheme.secondary,
-                ),
-                _buildAdminStat(
-                  theme,
-                  'Events This Week',
-                  '${_getUpcomingEventsCount(provider.recentEvents)}',
-                  Icons.calendar_today,
-                  Colors.purple.shade600,
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 32),
-
-            Text(
-              'Recent Events',
-              style: textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: colorScheme.onSurface,
+              GridView.count(
+                crossAxisCount: 2,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                childAspectRatio: 1.2,
+                children: [
+                  _buildAdminStat(
+                    theme,
+                    'Total Events',
+                    '${provider.eventsCount}',
+                    Icons.event_note,
+                    colorScheme.primary,
+                  ),
+                  _buildAdminStat(
+                    theme,
+                    'Total Participations',
+                    '${provider.participationsCount}',
+                    Icons.group_add,
+                    colorScheme.tertiary,
+                  ),
+                  _buildAdminStat(
+                    theme,
+                    'Active Scans Today',
+                    '${provider.scansCount}',
+                    Icons.qr_code_scanner,
+                    colorScheme.secondary,
+                  ),
+                  _buildAdminStat(
+                    theme,
+                    'Events This Week',
+                    '${_getUpcomingEventsCount(provider.recentEvents)}',
+                    Icons.calendar_today,
+                    Colors.purple.shade600,
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 12),
 
-            if (provider.recentEvents.isEmpty)
-              _buildEmptyState(
-                theme,
-                icon: Icons.event_busy,
-                title: "No recent events",
-                subtitle: "Create your first event to get started",
-              )
-            else
-              ...provider.recentEvents
-                  .take(5)
-                  .map((event) => _buildEventCard(theme, event, provider)),
-          ],
+              const SizedBox(height: 32),
+
+              Text(
+                'Recent Events',
+                style: textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              if (provider.isLoading)
+                Center(
+                  child: CircularProgressIndicator(color: colorScheme.primary),
+                )
+              else if (provider.recentEvents.isEmpty)
+                _buildEmptyState(
+                  theme,
+                  icon: Icons.event_busy,
+                  title: "No recent events",
+                  subtitle: "Create or be assigned an event to get started",
+                )
+              else
+                ...provider.recentEvents
+                    .take(5)
+                    .map((event) => _buildEventCard(theme, event, provider)),
+            ],
+          ),
         ),
       ),
     );
@@ -146,22 +156,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   value,
-                  style: theme.textTheme.headlineLarge?.copyWith(
+                  style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w900,
                     color: colorScheme.onSurface,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 Text(
                   title,
-                  style: theme.textTheme.bodyMedium?.copyWith(
+                  style: theme.textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.w500,
                   ),
                   overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
+                  maxLines: 2,
                 ),
               ],
             ),
@@ -177,9 +190,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     DashboardProvider provider,
   ) {
     final colorScheme = theme.colorScheme;
-    // Updated to use DateFormat for consistency
     final formattedDateTime = DateFormat(
-      'MMM d, yyyy at h:mm a',
+      "MMM d, yyyy 'at' h:mm a",
     ).format(event.timeStart);
 
     return Card(
@@ -207,6 +219,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     event.title,
@@ -222,6 +235,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -234,22 +249,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ],
               ),
             ),
-
-            if (event.timeStart.isAfter(DateTime.now()))
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: colorScheme.tertiaryContainer,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  'Upcoming',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: colorScheme.onTertiaryContainer,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
           ],
         ),
       ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/event_provider.dart';
+import '../providers/auth_provider.dart'; // NEW: Import AuthProvider
 import '../models/event_model.dart';
 
 class EventCreationScreen extends StatefulWidget {
@@ -93,6 +94,18 @@ class _EventCreationScreenState extends State<EventCreationScreen> {
       return;
     }
 
+    // --- RBAC FIX ---
+    final organizerId = context.read<AuthProvider>().user?.id;
+    if (organizerId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Authentication error: Organizer ID not found.'),
+        ),
+      );
+      return;
+    }
+    // --- END RBAC FIX ---
+
     setState(() {
       _isSaving = true;
     });
@@ -104,7 +117,9 @@ class _EventCreationScreenState extends State<EventCreationScreen> {
       timeEnd: _timeEnd,
       description: _description,
       location: _location,
+      organizerId: organizerId, // CRITICAL FIX: Passing the required ID
       createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
     );
 
     final eventProvider = context.read<EventProvider>();
@@ -158,6 +173,11 @@ class _EventCreationScreenState extends State<EventCreationScreen> {
                     Icons.event_note,
                     color: colorScheme.primary,
                   ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: colorScheme.surfaceContainerLow,
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -178,6 +198,11 @@ class _EventCreationScreenState extends State<EventCreationScreen> {
                     Icons.location_on_outlined,
                     color: colorScheme.secondary,
                   ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: colorScheme.surfaceContainerLow,
                 ),
                 onSaved: (value) {
                   _location = value;
@@ -192,6 +217,11 @@ class _EventCreationScreenState extends State<EventCreationScreen> {
                     Icons.description,
                     color: colorScheme.tertiary,
                   ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: colorScheme.surfaceContainerLow,
                 ),
                 maxLines: 3,
                 onSaved: (value) {
@@ -244,7 +274,7 @@ class _EventCreationScreenState extends State<EventCreationScreen> {
                       : const Icon(Icons.check_circle),
                   label: Text(
                     _isSaving ? 'Creating Event...' : 'Create Event',
-                    style: textTheme.titleMedium?.copyWith(
+                    style: theme.textTheme.titleMedium?.copyWith(
                       color: colorScheme.onPrimary,
                       fontWeight: FontWeight.w600,
                     ),

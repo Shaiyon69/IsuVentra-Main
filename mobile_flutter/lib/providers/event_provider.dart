@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/api_service.dart';
 import '../models/event_model.dart';
+import '../models/user_model.dart';
 
 class EventProvider with ChangeNotifier {
   final ApiService _api = ApiService();
@@ -14,14 +15,42 @@ class EventProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  Future<void> fetchEvents() async {
+  // Now accepts context for filtering
+  Future<void> fetchEvents({int? userId, UserRole? role}) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final List<dynamic> data = await _api.get('/events');
-      _events = data.map((json) => Event.fromJson(json)).toList();
+      final response = await _api.get('/events');
+
+      List<dynamic> data;
+      if (response is Map && response.containsKey('data')) {
+        data = response['data'] as List<dynamic>;
+      } else if (response is List) {
+        data = response;
+      } else {
+        throw Exception('Unexpected response format');
+      }
+
+      List<Event> allEvents = data.map((json) => Event.fromJson(json)).toList();
+
+      // --- RBAC FILTERING ---
+      if (role == UserRole.student) {
+        // Students: Active events only (Ending in future)
+        final now = DateTime.now();
+        _events = allEvents.where((e) => e.timeEnd.isAfter(now)).toList();
+      } else if (role == UserRole.admin) {
+        // Organizers: Only events created by/assigned to them
+        if (userId != null) {
+          _events = allEvents.where((e) => e.organizerId == userId).toList();
+        } else {
+          _events = [];
+        }
+      } else {
+        // Super Admin: See All
+        _events = allEvents;
+      }
     } catch (e) {
       debugPrint("Event Error: $e");
       _errorMessage = "Failed to load events. Please try again.";
@@ -32,6 +61,7 @@ class EventProvider with ChangeNotifier {
     }
   }
 
+  // Alias for backward compatibility if needed
   Future<void> loadEvents() => fetchEvents();
 
   Future<void> createEvent(Event event) async {
@@ -42,9 +72,10 @@ class EventProvider with ChangeNotifier {
         'time_start': DateFormat('yyyy-MM-dd HH:mm:ss').format(event.timeStart),
         'time_end': DateFormat('yyyy-MM-dd HH:mm:ss').format(event.timeEnd),
         'location': event.location,
-        'creator_id': event.creatorId,
+        // Backend should handle assigning organizer_id based on auth token
       });
-      await fetchEvents(); // Refresh the events list
+      // Re-fetch to update list (requires passing context again in UI, or just fetching all)
+      // Ideally, the UI triggers a refresh with the correct credentials.
     } catch (e) {
       debugPrint("Create Event Error: $e");
       throw Exception('Failed to create event');
@@ -63,9 +94,7 @@ class EventProvider with ChangeNotifier {
         )
         .toList();
 
-    // Sort by createdAt in descending order (most recent first)
     filteredEvents.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
     return filteredEvents;
   }
 }

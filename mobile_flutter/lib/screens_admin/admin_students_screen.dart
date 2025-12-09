@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
-import '../providers/dashboard_provider.dart';
+import '../providers/event_provider.dart';
 import '../providers/participation_provider.dart';
-import '../models/event_model.dart';
-import '../models/participation_model.dart';
+import '../providers/auth_provider.dart';
 import 'event_attendees_screen.dart';
 
 class AdminStudentsScreen extends StatefulWidget {
@@ -15,259 +13,254 @@ class AdminStudentsScreen extends StatefulWidget {
 }
 
 class _AdminStudentsScreenState extends State<AdminStudentsScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final dashboardProvider = context.read<DashboardProvider>();
-      final participationProvider = context.read<ParticipationProvider>();
-
-      dashboardProvider.loadDashboardData();
-      participationProvider.fetchParticipations();
+      _fetchData();
     });
+    _searchController.addListener(() {
+      if (!mounted) return;
+      setState(
+        () => _searchQuery = _searchController.text.trim().toLowerCase(),
+      );
+    });
+  }
+
+  void _fetchData() {
+    final user = context.read<AuthProvider>().user;
+    context.read<EventProvider>().fetchEvents(
+      userId: user?.id,
+      role: user?.role,
+    );
+    context.read<ParticipationProvider>().fetchParticipations();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final dashboardProvider = context.watch<DashboardProvider>();
-    final participationProvider = context.watch<ParticipationProvider>();
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
 
+    final eventProvider = context.watch<EventProvider>();
+    final participationProvider = context.watch<ParticipationProvider>();
+
+    final events = eventProvider.events.where((e) {
+      if (_searchQuery.isEmpty) return true;
+      return e.title.toLowerCase().contains(_searchQuery);
+    }).toList();
+
+    // Sort by newest first
+    events.sort((a, b) => b.timeStart.compareTo(a.timeStart));
+
     return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: () async {
-          await dashboardProvider.loadDashboardData();
-          await participationProvider.fetchParticipations();
-        },
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Student Participation',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: colorScheme.onSurface,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              if (dashboardProvider.isLoading ||
-                  participationProvider.isLoading)
-                const Center(child: CircularProgressIndicator())
-              else if (dashboardProvider.recentEvents.isEmpty)
-                _buildEmptyState(theme, 'No events found')
-              else
-                ...dashboardProvider.recentEvents.map(
-                  (event) => _buildEventCard(
-                    theme,
-                    event,
-                    participationProvider.getParticipationsForEvent(event.id),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEventCard(
-    ThemeData theme,
-    Event event,
-    List<Participation> participations,
-  ) {
-    final colorScheme = theme.colorScheme;
-    final formattedDateTime = DateFormat(
-      'MMM d, yyyy at h:mm a',
-    ).format(event.timeStart);
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      color: colorScheme.surfaceContainerHigh,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => EventAttendeesScreen(event: event),
-            ),
-          );
-        },
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.event,
-                  color: colorScheme.onPrimaryContainer,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      event.title,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      formattedDateTime,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    Text(
-                      '${participations.length} participants',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.primary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.arrow_forward_ios,
-                size: 16,
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildParticipantItem(ThemeData theme, Participation participation) {
-    final colorScheme = theme.colorScheme;
-    final timeIn = participation.timeIn != null
-        ? DateFormat('h:mm a').format(participation.timeIn!)
-        : 'N/A';
-    final timeOut = participation.timeOut != null
-        ? DateFormat('h:mm a').format(participation.timeOut!)
-        : 'Not checked out';
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(color: colorScheme.outline.withOpacity(0.1)),
-        ),
-      ),
-      child: Row(
+      body: Column(
         children: [
-          CircleAvatar(
-            backgroundColor: colorScheme.primaryContainer,
-            child: Icon(
-              Icons.person,
-              color: colorScheme.onPrimaryContainer,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  participation.studentName,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.onSurface,
-                  ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search events history...',
+                prefixIcon: Icon(
+                  Icons.search,
+                  color: colorScheme.onSurfaceVariant,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  'ID: ${participation.studentId}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          FocusScope.of(context).unfocus();
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
                 ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                'In: $timeIn',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colorScheme.primary,
-                  fontWeight: FontWeight.w500,
+                filled: true,
+                fillColor: colorScheme.surfaceContainerLow,
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 10,
+                  horizontal: 16,
                 ),
               ),
-              if (participation.timeOut != null)
-                Text(
-                  'Out: $timeOut',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colorScheme.secondary,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-            ],
+            ),
+          ),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: () async => _fetchData(),
+              child: events.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.event_note,
+                            size: 64,
+                            color: colorScheme.outlineVariant,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            _searchQuery.isEmpty
+                                ? 'No events found.'
+                                : 'No matching events.',
+                            style: textTheme.titleMedium?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: events.length,
+                      itemBuilder: (context, i) {
+                        final event = events[i];
+                        final parts = participationProvider
+                            .getParticipationsForEvent(event.id);
+
+                        final isFinished = event.timeEnd.isBefore(
+                          DateTime.now(),
+                        );
+
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          elevation: 0,
+                          color: isFinished
+                              ? colorScheme.surfaceContainer
+                              : colorScheme.surfaceContainerHigh,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(
+                              color: colorScheme.outlineVariant.withOpacity(
+                                0.3,
+                              ),
+                            ),
+                          ),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    EventAttendeesScreen(event: event),
+                              ),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: isFinished
+                                          ? colorScheme.surfaceContainerHighest
+                                          : colorScheme.primaryContainer,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Icon(
+                                      isFinished ? Icons.history : Icons.groups,
+                                      color: isFinished
+                                          ? colorScheme.onSurfaceVariant
+                                          : colorScheme.onPrimaryContainer,
+                                      size: 24,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          event.title,
+                                          style: textTheme.titleMedium
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                                color: isFinished
+                                                    ? colorScheme.onSurface
+                                                          .withOpacity(0.7)
+                                                    : colorScheme.onSurface,
+                                              ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.people_alt_outlined,
+                                              size: 16,
+                                              color: isFinished
+                                                  ? colorScheme.outline
+                                                  : colorScheme.primary,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              '${parts.length} Attendees',
+                                              style: textTheme.bodyMedium
+                                                  ?.copyWith(
+                                                    color: colorScheme
+                                                        .onSurfaceVariant,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (isFinished)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            colorScheme.surfaceContainerHighest,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: colorScheme.outlineVariant
+                                              .withOpacity(0.5),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'ENDED',
+                                        style: textTheme.labelSmall?.copyWith(
+                                          color: colorScheme.onSurfaceVariant,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    )
+                                  else
+                                    Icon(
+                                      Icons.arrow_forward_ios,
+                                      size: 16,
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildNoParticipants(ThemeData theme) {
-    final colorScheme = theme.colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Center(
-        child: Text(
-          'No participants yet',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: colorScheme.onSurfaceVariant,
-            fontStyle: FontStyle.italic,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(ThemeData theme, String message) {
-    final colorScheme = theme.colorScheme;
-    return Card(
-      elevation: 0,
-      color: colorScheme.surfaceContainerLow,
-      child: Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.people_outline, size: 64, color: colorScheme.outline),
-            const SizedBox(height: 16),
-            Text(
-              message,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
       ),
     );
   }

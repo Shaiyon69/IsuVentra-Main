@@ -18,7 +18,6 @@ class AuthProvider with ChangeNotifier {
 
   String? get savedEmail => _savedEmail;
   bool get rememberMe => _rememberMe;
-  String? get token => null;
 
   AuthProvider() {
     _loadSavedEmail();
@@ -30,7 +29,6 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // LOGIN - Simplified like Vue
   Future<bool> login(
     String identifier,
     String password, {
@@ -40,9 +38,8 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Single endpoint for both admin and student login
       final response = await _api.post('/login', {
-        'email': identifier, // Backend determines if it's email or student_id
+        'email': identifier,
         'password': password,
       });
 
@@ -59,11 +56,9 @@ class AuthProvider with ChangeNotifier {
       }
 
       await fetchUserProfile();
-
       return true;
     } catch (e) {
       debugPrint("Login Error: $e");
-
       return false;
     } finally {
       _isLoading = false;
@@ -71,7 +66,6 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // FETCH USER PROFILE
   Future<void> fetchUserProfile() async {
     try {
       final data = await _api.get('/user');
@@ -82,7 +76,6 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // AUTO-LOGIN CHECK
   Future<bool> tryAutoLogin() async {
     final token = await _storage.read(key: 'token');
     if (token == null) return false;
@@ -95,18 +88,6 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // FETCH USER BY STUDENT ID
-  Future<User?> fetchUserByStudentId(String studentId) async {
-    try {
-      final data = await _api.get('/users/by-student-id/$studentId');
-      return User.fromJson(data);
-    } catch (e) {
-      debugPrint('Error fetching user: $e');
-      return null;
-    }
-  }
-
-  // LOGOUT
   Future<void> logout() async {
     try {
       await _api.post('/logout', {});
