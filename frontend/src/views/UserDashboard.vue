@@ -6,25 +6,26 @@
     </header>
 
     <div class="action-bar">
-      <button @click="$router.push('/join')" class="scan-btn">
-        <span class="icon"></span> Scan QR to Join
+      <button @click="goToPass" class="id-pass-btn">
+        <i class="pi pi-id-card icon-left"></i> 
+        <span>View Digital ID</span>
       </button>
     </div>
 
     <div v-if="loading" class="loading-state">
       <div class="spinner"></div>
-      <p>Loading events...</p>
+      <p>Loading upcoming events...</p>
     </div>
 
-    <div v-else-if="events.length" class="events-grid">
-      <div v-for="e in events" :key="e.id" class="event-card">
+    <div v-else-if="sortedEvents.length" class="events-grid">
+      <div v-for="e in sortedEvents" :key="e.id" class="event-card">
         
         <div class="card-top">
           <span 
             class="status-badge" 
-            :class="e.is_ongoing ? 'status-live' : 'status-default'"
+            :class="getEventStatus(e).class"
           >
-            {{ e.is_ongoing ? '🔴 LIVE NOW' : '📅 EVENT' }}
+            {{ getEventStatus(e).label }}
           </span>
         </div>
 
@@ -37,14 +38,14 @@
           </div>
           <div class="meta-item">
             <span class="meta-icon">🕒</span>
-            <span>{{ formatDate(e.time_start) }}</span>
+            <span>{{ formatEventTime(e) }}</span>
           </div>
         </div>
 
         <p class="event-desc">{{ truncate(e.description, 100) }}</p>
 
         <div class="card-footer">
-          <span class="footer-text">View Details →</span>
+          <span class="footer-text">Event Details</span>
         </div>
       </div>
     </div>
@@ -58,16 +59,24 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
+import { useRouter } from "vue-router"; // Import router
 import api from "@/services/api";
 
+const router = useRouter();
 const events = ref([]);
 const loading = ref(true);
 
+// --- NAVIGATION FIX ---
+const goToPass = () => {
+  router.push({ name: 'join' }); // Using named route is safer
+};
+
+// --- DATA FETCHING ---
 async function fetchEvents() {
   try {
-    const res = await api.get("/events");
-    events.value = res.data.events ?? res.data;
+    const res = await api.get("/events?per_page=50"); 
+    events.value = res.data.data || res.data;
   } catch (err) {
     console.error("Error fetching events:", err);
   } finally {
@@ -75,16 +84,42 @@ async function fetchEvents() {
   }
 }
 
-// Helper: Format Date nicely (e.g., "Oct 25, 2:00 PM")
-function formatDate(dateString) {
-  if (!dateString) return "TBA";
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', { 
-    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+// --- STATUS LOGIC (Frontend Side) ---
+const getEventStatus = (e) => {
+  const now = new Date();
+  const start = new Date(e.time_start);
+  const end = new Date(e.time_end);
+
+  if (now >= start && now <= end) {
+    return { label: '🔴 LIVE NOW', class: 'status-live' };
+  } else if (now > end) {
+    return { label: '🏁 ENDED', class: 'status-ended' };
+  } else {
+    return { label: '📅 UPCOMING', class: 'status-default' };
+  }
+};
+
+// --- COMPUTED: SORTING ---
+// Puts Live events first, then Upcoming, then Ended
+const sortedEvents = computed(() => {
+  return [...events.value].sort((a, b) => {
+    const statusA = getEventStatus(a).label;
+    const statusB = getEventStatus(b).label;
+    if (statusA.includes('LIVE') && !statusB.includes('LIVE')) return -1;
+    if (!statusA.includes('LIVE') && statusB.includes('LIVE')) return 1;
+    return new Date(a.time_start) - new Date(b.time_start);
   });
+});
+
+// --- FORMATTERS ---
+function formatEventTime(e) {
+  if (!e.time_start) return "TBA";
+  const start = new Date(e.time_start);
+  const dateStr = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const timeStr = start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return `${dateStr} • ${timeStr}`;
 }
 
-// Helper: Truncate long descriptions
 function truncate(text, length) {
   if (!text) return "No description provided.";
   return text.length > length ? text.substring(0, length) + "..." : text;
@@ -100,163 +135,77 @@ onMounted(() => {
   max-width: 1200px;
   margin: 0 auto;
   padding: 40px 20px;
+  font-family: 'Inter', sans-serif;
 }
 
-/* Header Styling */
-.page-header {
-  text-align: center;
-  margin-bottom: 40px;
-}
-
-h1 {
-  color: var(--text-color);
-  font-size: 2.5rem;
-  font-weight: 700;
-  margin: 0;
-  letter-spacing: -0.5px;
-}
-
-.subtitle {
-  color: #7f8c8d;
-  font-size: 1.1rem;
-  margin-top: 8px;
-}
+/* Header */
+.page-header { text-align: center; margin-bottom: 40px; }
+h1 { color: #1e293b; font-size: 2.5rem; font-weight: 800; margin: 0; letter-spacing: -1px; }
+.subtitle { color: #64748b; font-size: 1.1rem; margin-top: 8px; }
 
 /* Action Bar */
-.action-bar {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 50px;
-}
+.action-bar { display: flex; justify-content: center; margin-bottom: 50px; }
 
-.scan-btn {
+.id-pass-btn {
   padding: 16px 32px;
-  background-color: var(--accent);
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   color: white;
   border: none;
-  border-radius: 50px; /* Pill shape */
+  border-radius: 50px;
   font-size: 1.1rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3); /* Green shadow */
+  transition: all 0.3s ease;
+  box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.4);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
-
-.scan-btn:hover {
-  background-color: var(--light-accent);
-  transform: translateY(-3px);
-  box-shadow: 0 8px 25px rgba(39, 174, 96, 0.4);
-}
+.id-pass-btn:hover { transform: translateY(-3px); box-shadow: 0 15px 30px -5px rgba(16, 185, 129, 0.5); filter: brightness(1.1); }
+.icon-left { font-size: 1.3rem; }
 
 /* Grid Layout */
 .events-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); /* Responsive columns */
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 30px;
 }
 
-/* Event Card Design */
+/* Event Card */
 .event-card {
   background-color: white;
-  border-radius: 16px;
-  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
   padding: 24px;
   transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
   position: relative;
-  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
+.event-card:hover { transform: translateY(-8px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); border-color: #10b981; }
 
-.event-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
-  border-color: var(--light-accent);
-}
-
-.card-top {
-  margin-bottom: 12px;
-}
+.card-top { margin-bottom: 16px; }
 
 .status-badge {
-  font-size: 0.75rem;
-  font-weight: 800;
-  padding: 4px 12px;
-  border-radius: 20px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-size: 0.7rem; font-weight: 800; padding: 6px 12px; border-radius: 30px; text-transform: uppercase; letter-spacing: 0.5px;
 }
+.status-live { background-color: #fef2f2; color: #ef4444; border: 1px solid #fecaca; }
+.status-default { background-color: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+.status-ended { background-color: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
 
-.status-live {
-  background-color: #ffebee;
-  color: #c62828;
-}
+.event-title { font-size: 1.35rem; color: #1e293b; margin: 0 0 12px 0; line-height: 1.3; font-weight: 700; }
+.event-meta { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+.meta-item { display: flex; align-items: center; gap: 10px; color: #475569; font-size: 0.9rem; font-weight: 500; }
+.meta-icon { font-size: 1rem; }
+.event-desc { color: #64748b; font-size: 0.95rem; line-height: 1.6; margin-bottom: 24px; flex-grow: 1; }
 
-.status-default {
-  background-color: #f1f8e9;
-  color: var(--text-color);
-}
+.card-footer { padding-top: 16px; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; }
+.footer-text { color: #10b981; font-weight: 700; font-size: 0.9rem; cursor: pointer; }
 
-.event-title {
-  font-size: 1.4rem;
-  color: var(--text-color);
-  margin: 0 0 16px 0;
-  line-height: 1.3;
-}
-
-.event-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 20px;
-}
-
-.meta-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: #546e7a;
-  font-size: 0.95rem;
-}
-
-.event-desc {
-  color: #78909c;
-  font-size: 0.95rem;
-  line-height: 1.6;
-  margin-bottom: 20px;
-  flex-grow: 1; /* Pushes footer down */
-}
-
-.card-footer {
-  padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
-}
-
-.footer-text {
-  color: var(--accent);
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-/* Empty & Loading States */
-.loading-state, .empty-state {
-  text-align: center;
-  padding: 60px 0;
-  color: #90a4ae;
-}
-
-.spinner {
-  width: 40px; height: 40px; border: 4px solid #eceff1; border-top: 4px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px;
-}
-
-.empty-icon {
-  font-size: 4rem;
-  margin-bottom: 16px;
-  opacity: 0.5;
-}
-
+/* Loading & Empty */
+.loading-state, .empty-state { text-align: center; padding: 80px 0; color: #94a3b8; }
+.spinner { width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top: 4px solid #10b981; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+.empty-icon { font-size: 4rem; margin-bottom: 16px; opacity: 0.5; filter: grayscale(100%); }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 </style>

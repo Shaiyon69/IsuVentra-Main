@@ -2,13 +2,10 @@ import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import api from "@/services/api";
 
-// 1. Pages (Lazy Loading)
 const LoginPage = () => import("@/views/LoginPage.vue");
 const RegisterPage = () => import("@/views/RegisterPage.vue");
 const UserDashboard = () => import("@/views/UserDashboard.vue");
 const JoinPage = () => import("@/views/JoinPage.vue");
-
-// 2. Admin Components
 const AdminPanel = () => import("@/views/admin/AdminPanel.vue");
 const OverviewTab = () => import("@/components/admin/OverviewTab.vue");
 const AnalyticsTab = () => import("@/components/admin/AnalyticsTab.vue");
@@ -41,7 +38,7 @@ const routes = [
     path: "/admin",
     name: "admin",
     component: AdminPanel,
-    meta: { requiresAuth: true, role: "admin" }, // Both Admin and Sub-Admin need access here
+    meta: { requiresAuth: true, role: "admin" },
     redirect: { name: 'admin-dashboard' },
     children: [
       {
@@ -57,12 +54,7 @@ const routes = [
       {
         path: "scan",
         name: "admin-scan",
-        component: () => AdminScanner
-      },
-      {
-        path: "students",
-        name: "admin-students",
-        component: StudentsTab
+        component: AdminScanner
       },
       {
         path: "students",
@@ -98,7 +90,6 @@ router.beforeEach(async (to, from, next) => {
   // 1. Login/Register Access Check
   if (["login", "register"].includes(to.name)) {
     if (auth.token) {
-      // FIX 1: Redirect directly to 'admin-dashboard', not 'admin'
       return auth.isAdmin
         ? next({ name: "admin-dashboard" })
         : next({ name: "dashboard" });
@@ -106,7 +97,6 @@ router.beforeEach(async (to, from, next) => {
     return next();
   }
 
-  // 2. Protected Routes Check
   if (to.meta.requiresAuth) {
     if (!auth.token) return next({ name: "login" });
 

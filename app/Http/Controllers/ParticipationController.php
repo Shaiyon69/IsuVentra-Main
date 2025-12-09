@@ -33,7 +33,7 @@ class ParticipationController extends Controller
             $query->where(function($q) use ($search) {
                 $q->whereHas('student', function($subQ) use ($search) {
                     $subQ->where('name', 'like', "%{$search}%")
-                         ->orWhere('student_id', 'like', "%{$search}%");
+                           ->orWhere('student_id', 'like', "%{$search}%");
                 })
                 ->orWhereHas('event', function($subQ) use ($search) {
                     $subQ->where('title', 'like', "%{$search}%");
@@ -53,9 +53,9 @@ class ParticipationController extends Controller
                     'id' => $p->id,
                     'student_id' => $p->student_id,
                     'event_id' => $p->event_id,
-                    'student_name' => $p->student ? $p->student->name : 'Unknown', // Flattened for table
+                    'student_name' => $p->student ? $p->student->name : 'Unknown', 
                     'student_school_id' => $p->student ? $p->student->student_id : 'N/A',
-                    'event_name' => $p->event ? $p->event->title : 'Unknown', // Flattened for table
+                    'event_name' => $p->event ? $p->event->title : 'Unknown', 
                     'time_in' => $p->time_in,
                     'time_out' => $p->time_out,
                 ];
@@ -99,9 +99,17 @@ class ParticipationController extends Controller
     }
 
     // --- QR ACTIONS ---
+
+    /**
+     * Handle Time-In via QR Scan
+     */
     public function scan(Request $request)
     {
-        $request->validate(['event_id' => 'required|exists:events,id']);
+        // 1. Validation: Expecting 'student_id' to be the String form (e.g., "2023-001")
+        $request->validate([
+            'event_id' => 'required|exists:events,id',
+            'student_id' => 'required' 
+        ]);
 
         $user = $request->user();
         $event = Event::find($request->event_id);
@@ -110,30 +118,42 @@ class ParticipationController extends Controller
              return response()->json(['status' => 'error', 'message' => 'Unauthorized event manager.'], 403);
         }
 
-        return DB::transaction(function () use ($request, $user) {
-            $studentId = $request->input('student_id'); 
+        return DB::transaction(function () use ($request) {
+            $scannedId = $request->input('student_id'); 
             
-            if ($studentId) {
-                $student = Student::find($studentId); 
-            } else {
-                $student = $user->student;
-            }
+            // 2. Find Student by SCHOOL ID String
+            $student = Student::where('student_id', $scannedId)->first();
 
             if (!$student) {
-                return response()->json(['status' => 'error', 'message' => 'Student not found.'], 422);
+                return response()->json(['status' => 'error', 'message' => 'Student ID not found in database.'], 404);
             }
 
+            // 3. Check for existing participation using the resolved Primary Key ($student->id)
             $existing = Participation::where('student_id', $student->id)
                 ->where('event_id', $request->event_id)
                 ->lockForUpdate()
                 ->first();
 
-            if ($existing) {
-                return response()->json(['status' => 'already_in', 'message' => 'Already participating.']);
+            // Scenario: Already In (Time out is null)
+            if ($existing && $existing->time_out === null) {
+                return response()->json([
+                    'status' => 'already_in', 
+                    'message' => 'Student is already timed in.'
+                ]);
             }
 
+            // Scenario: Already Completed (Time out is set)
+            if ($existing && $existing->time_out !== null) {
+                // Determine logic: Allow re-entry? Or block? usually we block duplicate entries per event.
+                 return response()->json([
+                    'status' => 'error', 
+                    'message' => 'Student has already completed this event.'
+                ], 422);
+            }
+
+            // Scenario: New Entry
             Participation::create([
-                'student_id' => $student->id,
+                'student_id' => $student->id, // Use Database PK
                 'event_id' => $request->event_id,
                 'time_in' => now(),
             ]);
@@ -142,9 +162,15 @@ class ParticipationController extends Controller
         });
     }
 
+    /**
+     * Handle Time-Out via Confirmation
+     */
     public function timeOut(Request $request)
     {
-        $request->validate(['event_id' => 'required|exists:events,id']);
+        $request->validate([
+            'event_id' => 'required|exists:events,id',
+            'student_id' => 'required' // Expecting String ID (e.g. "2023-001")
+        ]);
 
         $user = $request->user();
         $event = Event::find($request->event_id);
@@ -154,24 +180,57 @@ class ParticipationController extends Controller
         }
 
         return DB::transaction(function () use ($request) {
-            $studentId = request()->input('student_id'); 
+            $scannedId = $request->input('student_id'); 
             
-            if (!$studentId) {
+            // 1. Find Student by SCHOOL ID String
+            $student = Student::where('student_id', $scannedId)->first();
+            
+            if (!$student) {
                  return response()->json(['status' => 'error', 'message' => 'Student ID required for timeout.'], 422);
             }
             
-            $participation = Participation::where('student_id', $studentId)
+            // 2. Find Participation using resolved Primary Key ($student->id)
+            $participation = Participation::where('student_id', $student->id)
                 ->where('event_id', $request->event_id)
+                ->whereNull('time_out') // Only find sessions that are still active
                 ->lockForUpdate()
                 ->first();
 
             if (!$participation) {
-                return response()->json(['status' => 'not_found', 'message' => 'Not participating.'], 404);
+                return response()->json(['status' => 'not_found', 'message' => 'No active participation found.'], 404);
             }
 
             $participation->update(['time_out' => now()]);
 
             return response()->json(['status' => 'timed_out', 'message' => 'Timed out successfully.']);
         });
+    }
+
+    public function checkStatus(Request $request)
+    {
+        $request->validate([
+            'event_id' => 'required|exists:events,id',
+            'student_id' => 'required' // String ID
+        ]);
+
+        $student = Student::where('student_id', $request->student_id)->first();
+
+        if (!$student) {
+            return response()->json(['status' => 'not_found']);
+        }
+
+        $participation = Participation::where('student_id', $student->id)
+            ->where('event_id', $request->event_id)
+            ->first();
+
+        if (!$participation) {
+            return response()->json(['status' => 'none']); // Ready for Time In
+        }
+
+        if ($participation->time_out === null) {
+            return response()->json(['status' => 'active']); // Ready for Time Out
+        }
+
+        return response()->json(['status' => 'completed']); // Already done
     }
 }
