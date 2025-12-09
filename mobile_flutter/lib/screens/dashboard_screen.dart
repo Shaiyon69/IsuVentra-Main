@@ -75,10 +75,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 elevation: 0,
                 color: colorScheme.surfaceContainerHigh,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(5),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(24.0),
+                  padding: const EdgeInsets.all(16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -94,26 +94,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               colorScheme.primary,
                             ),
                           ),
-                          Expanded(
-                            child: _buildStatCard(
-                              context,
-                              'Joined Today',
-                              // Provider calculates "Joined Today" for students
-                              provider.participationsCount.toString(),
-                              Icons.check_circle_outline,
-                              colorScheme.tertiary,
-                            ),
-                          ),
-                          Expanded(
-                            child: _buildStatCard(
-                              context,
-                              'Scans Today',
-                              // Provider calculates "Scans Today" for students
-                              provider.scansCount.toString(),
-                              Icons.qr_code_scanner,
-                              colorScheme.secondary,
-                            ),
-                          ),
+                          //   Expanded(
+                          //     child: _buildStatCard(
+                          //       context,
+                          //       'Joined Today',
+                          //       // Provider calculates "Joined Today" for students
+                          //       provider.participationsCount.toString(),
+                          //       Icons.check_circle_outline,
+                          //       colorScheme.tertiary,
+                          //     ),
+                          //   ),
+                          //   Expanded(
+                          //     child: _buildStatCard(
+                          //       context,
+                          //       'Scans Today',
+                          //       // Provider calculates "Scans Today" for students
+                          //       provider.scansCount.toString(),
+                          //       Icons.qr_code_scanner,
+                          //       colorScheme.secondary,
+                          //     ),
+                          //   ),
                         ],
                       ),
                     ],
@@ -123,7 +123,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(height: 32),
 
               Text(
-                'Upcoming & Ongoing',
+                'Ongoing/Upcoming Events',
                 style: textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: colorScheme.onSurface,

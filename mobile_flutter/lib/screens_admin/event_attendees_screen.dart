@@ -142,7 +142,7 @@ class _EventAttendeesScreenState extends State<EventAttendeesScreen> {
                       p.studentName,
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    subtitle: Text('ID: ${p.studentId}'),
+                    // subtitle: Text('ID: ${p.studentId}'),
                     trailing: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.end,

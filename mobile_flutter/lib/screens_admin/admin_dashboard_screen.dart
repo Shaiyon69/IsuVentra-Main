@@ -50,13 +50,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Dashboard Overview',
-                style: textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: colorScheme.onSurface,
-                ),
-              ),
               const SizedBox(height: 16),
 
               // --- STATS GRID (Admin View: Totals) ---
@@ -82,27 +75,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     Icons.group_add,
                     colorScheme.tertiary,
                   ),
-                  _buildAdminStat(
-                    theme,
-                    'Total Scans',
-                    '${provider.scansCount}',
-                    Icons.qr_code_scanner,
-                    colorScheme.secondary,
-                  ),
-                  _buildAdminStat(
-                    theme,
-                    'Events Displayed',
-                    '${top5RecentEvents.length}',
-                    Icons.bar_chart,
-                    Colors.purple.shade600,
-                  ),
+                  //   _buildAdminStat(
+                  //     theme,
+                  //     'Total Scans',
+                  //     '${provider.scansCount}',
+                  //     Icons.qr_code_scanner,
+                  //     colorScheme.secondary,
+                  //   ),
+                  //   _buildAdminStat(
+                  //     theme,
+                  //     'Events Displayed',
+                  //     '${top5RecentEvents.length}',
+                  //     Icons.bar_chart,
+                  //     Colors.purple.shade600,
+                  //   ),
                 ],
               ),
 
               const SizedBox(height: 32),
 
               Text(
-                'Recent Events (Top 5)',
+                'Recent Events',
                 style: textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: colorScheme.onSurface,

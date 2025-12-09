@@ -5,7 +5,7 @@
         <div class="logo-icon"><i class="pi pi-box"></i></div>
         <div class="brand-info">
           <h2 class="brand-name">ISUVentra</h2>
-          <span class="brand-badge">ADMIN v1.1</span>
+          <span class="brand-badge">Beta v0.1</span>
         </div>
       </div>
 
@@ -96,7 +96,7 @@ import ProgressSpinner from 'primevue/progressspinner';
 const route = useRoute();
 const router = useRouter();
 const auth = useAuthStore();
-const PER_PAGE = 15; 
+const PER_PAGE = 15;
 const isGlobalLoading = ref(false);
 
 const students = ref([]);
@@ -150,9 +150,9 @@ async function fetchEvents(page = 1) {
   eventsPage.value = page;
   try {
     const res = await api.get(`/events?page=${page}&per_page=${PER_PAGE}&search=${currentSearch.value}`);
-    events.value = res.data.data;      
-    totalEvents.value = res.data.total; 
-  } catch (err) { console.error(err); } 
+    events.value = res.data.data;
+    totalEvents.value = res.data.total;
+  } catch (err) { console.error(err); }
   finally { loadingEvents.value = false; }
 }
 
@@ -163,7 +163,7 @@ async function fetchStudents(page = 1) {
     const res = await api.get(`/students?page=${page}&per_page=${PER_PAGE}&search=${currentSearch.value}`);
     students.value = res.data.data;
     totalStudents.value = res.data.total;
-  } catch (err) { console.error(err); } 
+  } catch (err) { console.error(err); }
   finally { loadingStudents.value = false; }
 }
 
@@ -174,7 +174,7 @@ async function fetchParticipation(page = 1) {
     const res = await api.get(`/participations?page=${page}&per_page=${PER_PAGE}&search=${currentSearch.value}`);
     participation.value = res.data.data;
     totalParticipation.value = res.data.total;
-  } catch (err) { console.error(err); } 
+  } catch (err) { console.error(err); }
   finally { loadingParticipation.value = false; }
 }
 
@@ -186,11 +186,11 @@ function handlePageChange(page) {
 
 function handleSearch(query) {
   currentSearch.value = query;
-  handlePageChange(1); 
+  handlePageChange(1);
 }
 
 function refreshCurrentTab() {
-  handlePageChange(1); 
+  handlePageChange(1);
 }
 
 function handleLogout() {
@@ -209,7 +209,7 @@ async function loadInitialData() {
   isGlobalLoading.value = true;
   try {
     await Promise.all([fetchStudents(1), fetchEvents(1), fetchParticipation(1)]);
-  } catch (err) { console.error(err); } 
+  } catch (err) { console.error(err); }
   finally { isGlobalLoading.value = false; }
 }
 

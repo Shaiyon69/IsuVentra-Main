@@ -7,14 +7,14 @@
       <div class="action-group">
         <span class="p-input-icon-left">
           <i class="pi pi-search" />
-          <InputText 
-            v-model="searchQuery" 
-            placeholder="Search events..." 
-            class="p-inputtext-sm search-input" 
+          <InputText
+            v-model="searchQuery"
+            placeholder="Search events..."
+            class="p-inputtext-sm search-input"
             @keydown.enter="triggerSearch"
           />
         </span>
-        
+
         <input type="file" ref="fileInput" accept=".csv" style="display: none" @change="handleFileUpload" />
         <Button label="Import CSV" icon="pi pi-upload" severity="secondary" outlined size="small" @click="triggerFileInput" />
         <Button label="New Event" icon="pi pi-plus" size="small" @click="showModal = true" />
@@ -22,16 +22,16 @@
     </div>
 
     <div class="table-container">
-      <DataTable 
-        :value="events" 
+      <DataTable
+        :value="events"
         :loading="loading"
-        stripedRows 
-        class="custom-table" 
-        scrollable 
+        stripedRows
+        class="custom-table"
+        scrollable
         scrollHeight="flex"
       >
         <template #empty><div class="empty-msg">No events found.</div></template>
-        
+
         <Column field="title" header="Title" class="font-bold"></Column>
         <Column header="Date & Time" field="time_start">
           <template #body="slotProps">
@@ -62,21 +62,21 @@
         Showing {{ events.length }} records on Page {{ currentPage }}
       </span>
       <div class="page-buttons">
-        <Button 
-          icon="pi pi-chevron-left" 
-          label="Prev" 
-          @click="changePage(currentPage - 1)" 
-          :disabled="currentPage <= 1 || loading" 
-          outlined 
+        <Button
+          icon="pi pi-chevron-left"
+          label="Prev"
+          @click="changePage(currentPage - 1)"
+          :disabled="currentPage <= 1 || loading"
+          outlined
           size="small"
         />
-        <Button 
-          label="Next" 
-          icon="pi pi-chevron-right" 
+        <Button
+          label="Next"
+          icon="pi pi-chevron-right"
           iconPos="right"
-          @click="changePage(currentPage + 1)" 
-          :disabled="!hasNextPage || loading" 
-          outlined 
+          @click="changePage(currentPage + 1)"
+          :disabled="!hasNextPage || loading"
+          outlined
           size="small"
         />
       </div>
@@ -84,28 +84,43 @@
 
     <Dialog v-model:visible="showModal" modal header="Create Event" :style="{ width: '500px' }" class="p-fluid">
       <form @submit.prevent="submitEvent" class="form-container">
+
         <div class="field">
           <label>Event Title</label>
-          <InputText v-model="form.title" required />
+          <InputText v-model="form.title" required class="w-full" />
         </div>
+
         <div class="form-row">
           <div class="field">
             <label>Start Time</label>
-            <input type="datetime-local" v-model="form.time_start" class="p-inputtext w-full" required />
+            <input
+              type="datetime-local"
+              v-model="form.time_start"
+              class="p-inputtext w-full"
+              required
+            />
           </div>
           <div class="field">
             <label>End Time</label>
-            <input type="datetime-local" v-model="form.time_end" class="p-inputtext w-full" required />
+            <input
+              type="datetime-local"
+              v-model="form.time_end"
+              class="p-inputtext w-full"
+              required
+            />
           </div>
         </div>
+
         <div class="field">
           <label>Location</label>
-          <InputText v-model="form.location" required />
+          <InputText v-model="form.location" required class="w-full" />
         </div>
+
         <div class="field">
           <label>Description</label>
-          <Textarea v-model="form.description" rows="3" autoResize />
+          <Textarea v-model="form.description" rows="3" autoResize class="w-full" />
         </div>
+
         <div class="dialog-footer">
           <Button label="Cancel" text severity="secondary" @click="showModal = false" />
           <Button type="submit" label="Create Event" icon="pi pi-check" :loading="isSubmitting" />
@@ -130,7 +145,7 @@ const props = defineProps(['events', 'totalRecords', 'loading', 'currentPage']);
 const emit = defineEmits(['refresh', 'page-change', 'search']);
 
 const searchQuery = ref('');
-const PER_PAGE = 15; 
+const PER_PAGE = 15;
 
 // --- Computed & Methods ---
 const hasNextPage = computed(() => {
@@ -218,7 +233,26 @@ const handleFileUpload = (event) => {
 .form-container { display: flex; flex-direction: column; gap: 1rem; margin-top: 0.5rem; }
 .field { display: flex; flex-direction: column; gap: 0.5rem; }
 .field label { font-size: 0.875rem; font-weight: 600; color: #475569; }
-.form-row { display: flex; gap: 1rem; }
-.form-row > * { flex: 1; }
+
+/* === UPDATED FORM STYLES === */
+.form-row {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+}
+
+.form-row .field {
+  flex: 1;      /* Ensures equal distribution */
+  min-width: 0; /* Prevents overflow inside flex containers */
+}
+
+input[type="datetime-local"] {
+  width: 100%;
+  box-sizing: border-box; /* Ensures padding is included in width calculation */
+}
+
+/* Utilities if not using PrimeFlex */
+.w-full { width: 100%; }
+
 .dialog-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 1.5rem; }
 </style>

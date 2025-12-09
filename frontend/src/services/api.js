@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: 'http://192.168.100.238:8000/api', // backend base URL
+    baseURL: 'http://10.241.19.244:8000/api', // backend base URL
     headers: {
         'Accept': 'application/json',
     },
@@ -16,7 +16,7 @@ api.interceptors.request.use((req) => {
     return req;
 });
 
-// handle token expiration 
+// handle token expiration
 api.interceptors.response.use(
     (response) => response,
     (error) => {

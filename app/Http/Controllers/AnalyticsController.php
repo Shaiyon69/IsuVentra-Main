@@ -27,7 +27,7 @@ class AnalyticsController extends Controller
             if ($p->time_in && $p->event) {
                 // Normalize names (e.g. "Tech Fest 2023" -> "Tech Fest")
                 $baseName = $this->getBaseEventName($p->event->title);
-                
+
                 try {
                     // Robust parsing: Works even if Model casting is missing
                     $year = Carbon::parse($p->time_in)->format('Y');
@@ -64,12 +64,12 @@ class AnalyticsController extends Controller
 
             // Math Calculations
             $movingAvg = $this->calculateMovingAverage($actualCounts, 3);
-            $expSmooth = $this->calculateExponentialSmoothing($actualCounts, 0.4); 
-            
+            $expSmooth = $this->calculateExponentialSmoothing($actualCounts, 0.4);
+
             // Forecast Future (Next 3 Years)
             // Filter nulls from Moving Avg to prevent calculation errors
             $cleanMovingAvg = array_values(array_filter($movingAvg, fn($v) => !is_null($v)));
-            
+
             $forecastEs = $this->generateForecasts($expSmooth, 3);
             $forecastMa = $this->generateForecasts($cleanMovingAvg, 3);
 
@@ -80,8 +80,12 @@ class AnalyticsController extends Controller
                 (string) ($lastYear + 3)
             ];
 
-            // Generate "Growth/Decline" Text Analysis
-            $analysis = $this->generatePrescriptiveAnalysis($actualCounts, $forecastEs);
+            // Generate Analysis
+            // 1. Prescriptive (Future Outlook)
+            $prescriptive = $this->generatePrescriptiveAnalysis($actualCounts, $forecastEs);
+
+            // 2. Descriptive (Past History) - NEW
+            $descriptive = $this->generateDescriptiveAnalysis($actualCounts, $years);
 
             // Final Structure
             $eventsForecast[$eventName] = [
@@ -92,12 +96,39 @@ class AnalyticsController extends Controller
                 'forecast_years' => $forecastYears,
                 'forecast_exponential' => $forecastEs,
                 'forecast_moving_average' => $forecastMa,
-                'analysis' => $analysis,
+                'analysis' => $prescriptive,
+                'descriptive' => $descriptive, // Added to response
                 'isOpen' => false
             ];
         }
 
         return response()->json(['events' => $eventsForecast]);
+    }
+
+    public function getDashboardStats()
+    {
+        // 1. Card Counts (Fast aggregate queries)
+        $totalStudents = Student::count();
+        $totalEvents = Event::count();
+        $totalParticipations = Participation::count();
+
+        // 2. Main Chart Data (Group by Event)
+        // This gives us the total count per event without loading all rows
+        $eventPopularity = DB::table('participations')
+            ->join('events', 'participations.event_id', '=', 'events.id')
+            ->select('events.title', DB::raw('count(*) as total'))
+            ->groupBy('events.title')
+            ->orderByDesc('total')
+            ->get();
+
+        return response()->json([
+            'counts' => [
+                'students' => $totalStudents,
+                'events' => $totalEvents,
+                'participations' => $totalParticipations
+            ],
+            'chart_data' => $eventPopularity
+        ]);
     }
 
     // ====================================
@@ -169,46 +200,46 @@ class AnalyticsController extends Controller
             return [
                 'type' => 'positive',
                 'label' => 'Growth',
-                'text' => 'ISUVentra predicts a +' . round($diffPercent, 1) . '% surge based on trends.'
+                'text' => 'ISUVentra predicts a +' . round($diffPercent, 1) . '% surge based on trends. Make sure students and organizers are well accomodated.'
             ];
         } elseif ($diffPercent < -5) {
             return [
                 'type' => 'negative',
                 'label' => 'Decline',
-                'text' => 'ISUVentra predicts a ' . round($diffPercent, 1) . '% drop. Considerations needed.'
+                'text' => 'ISUVentra predicts a ' . round($diffPercent, 1) . '% drop. Consider more thorough dissemination of event information and other actions.'
             ];
         } else {
             return [
                 'type' => 'neutral',
                 'label' => 'Stable',
-                'text' => 'Attendance is expected to remain consistent with previous years.'
+                'text' => 'Attendance is expected to remain consistent with previous years. Continue monitoring for any unexpected changes.'
             ];
         }
     }
 
-    public function getDashboardStats()
-    {
-        // 1. Card Counts (Fast aggregate queries)
-        $totalStudents = Student::count();
-        $totalEvents = Event::count();
-        $totalParticipations = Participation::count();
+    private function generateDescriptiveAnalysis($actual, $years) {
+        if (empty($actual)) return null;
 
-        // 2. Main Chart Data (Group by Event)
-        // This gives us the total count per event without loading all rows
-        $eventPopularity = DB::table('participations')
-            ->join('events', 'participations.event_id', '=', 'events.id')
-            ->select('events.title', DB::raw('count(*) as total'))
-            ->groupBy('events.title')
-            ->orderByDesc('total')
-            ->get();
+        $average = round(array_sum($actual) / count($actual));
+        $maxVal = max($actual);
+        $minVal = min($actual);
 
-        return response()->json([
-            'counts' => [
-                'students' => $totalStudents,
-                'events' => $totalEvents,
-                'participations' => $totalParticipations
-            ],
-            'chart_data' => $eventPopularity
-        ]);
+        // Find index of max value to get the year
+        $maxIndex = array_search($maxVal, $actual);
+        $peakYear = $years[$maxIndex] ?? 'N/A';
+
+        // Determine general trend (Slope of Start vs End)
+        $start = $actual[0];
+        $end = end($actual);
+        $trendLabel = ($end > $start) ? 'Upward Trend' : (($end < $start) ? 'Downward Trend' : 'Consistent');
+
+        return [
+            'average_attendance' => $average,
+            'peak_attendance' => $maxVal,
+            'peak_year' => $peakYear,
+            'lowest_attendance' => $minVal,
+            'trend_label' => $trendLabel,
+            'summary' => "Historically, this event averages $average participants. It reached its peak in $peakYear with $maxVal attendees."
+        ];
     }
 }
