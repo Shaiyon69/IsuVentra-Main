@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // REQUIRED IMPORT
 import 'providers/participation_provider.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
@@ -8,7 +9,10 @@ import 'providers/dashboard_provider.dart';
 import 'auth/login.dart';
 import 'theme.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await const FlutterSecureStorage().deleteAll();
+
   runApp(const MainApp());
 }
 

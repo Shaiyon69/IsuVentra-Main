@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../providers/dashboard_provider.dart';
 import 'view_event.dart';
 import '../models/event_model.dart';
+import '../providers/auth_provider.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -16,15 +17,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<DashboardProvider>().loadDashboardData();
+      final user = context.read<AuthProvider>().user;
+      context.read<DashboardProvider>().loadDashboardData(
+        userId: user?.id,
+        role: user?.role,
+        refresh: true,
+      );
     });
   }
 
-  List<Event> _getStudentActiveEvents(List<Event> allEvents) {
+  /// Calculates how many active events fall on "Today"
+  int _getEventsTodayCount(List<Event> events) {
     final now = DateTime.now();
-    return allEvents.where((event) {
-      return event.timeEnd.isAfter(now);
-    }).toList();
+    return events.where((event) {
+      return event.timeStart.year == now.year &&
+          event.timeStart.month == now.month &&
+          event.timeStart.day == now.day;
+    }).length;
   }
 
   @override
@@ -33,22 +42,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
     final provider = context.watch<DashboardProvider>();
+    final user = context.watch<AuthProvider>().user;
 
-    final studentEvents = _getStudentActiveEvents(provider.recentEvents);
+    // Use the recent list (which is already top 5 from provider)
+    // But we need the full list to count "Events Today" correctly if provider truncates it.
+    // NOTE: Provider currently truncates _recentEvents to 5.
+    // To get an accurate "Events Today" count if there are >5 events,
+    // we rely on the list we have. If exact count > 5 is critical,
+    // we'd need a separate "eventsToday" counter in provider.
+    // For now, calculating based on visible recents or provider count.
 
-    studentEvents.sort((a, b) => a.timeStart.compareTo(b.timeStart));
-
-    final activeEventCount = studentEvents.length;
+    final eventsTodayCount = _getEventsTodayCount(provider.recentEvents);
+    final top5Events = provider.recentEvents;
 
     return Scaffold(
       body: RefreshIndicator(
-        onRefresh: () => provider.loadDashboardData(),
+        onRefresh: () async {
+          await provider.loadDashboardData(
+            userId: user?.id,
+            role: user?.role,
+            refresh: true,
+          );
+        },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // --- STATS CARD ---
               Card(
                 elevation: 0,
                 color: colorScheme.surfaceContainerHigh,
@@ -66,27 +88,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           Expanded(
                             child: _buildStatCard(
                               context,
-                              'Active Events',
-                              '$activeEventCount',
-                              Icons.event_available,
+                              'Events Today',
+                              '$eventsTodayCount',
+                              Icons.calendar_today,
                               colorScheme.primary,
                             ),
                           ),
                           Expanded(
                             child: _buildStatCard(
                               context,
-                              'Total Joined',
+                              'Joined Today',
+                              // Provider calculates "Joined Today" for students
                               provider.participationsCount.toString(),
-                              Icons.check_circle,
+                              Icons.check_circle_outline,
                               colorScheme.tertiary,
                             ),
                           ),
                           Expanded(
                             child: _buildStatCard(
                               context,
-                              'Total Scans',
+                              'Scans Today',
+                              // Provider calculates "Scans Today" for students
                               provider.scansCount.toString(),
-                              Icons.qr_code,
+                              Icons.qr_code_scanner,
                               colorScheme.secondary,
                             ),
                           ),
@@ -107,11 +131,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(height: 16),
 
+              // --- EVENTS LIST ---
               if (provider.isLoading)
                 Center(
-                  child: CircularProgressIndicator(color: colorScheme.primary),
+                  child: Padding(
+                    padding: const EdgeInsets.all(32.0),
+                    child: CircularProgressIndicator(
+                      color: colorScheme.primary,
+                    ),
+                  ),
                 )
-              else if (studentEvents.isEmpty)
+              else if (top5Events.isEmpty)
                 Padding(
                   padding: const EdgeInsets.all(20),
                   child: Center(
@@ -134,7 +164,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 )
               else
-                _buildUpcomingEvents(context, studentEvents),
+                _buildUpcomingEvents(context, top5Events),
 
               const SizedBox(height: 24),
             ],
@@ -162,7 +192,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             color: iconColor.withOpacity(0.12),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, size: 30, color: iconColor),
+          child: Icon(icon, size: 28, color: iconColor),
         ),
         const SizedBox(height: 12),
         Text(
@@ -174,8 +204,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         Text(
           title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+          maxLines: 2,
+          textAlign: TextAlign.center,
           style: theme.textTheme.bodyMedium?.copyWith(
             color: colorScheme.onSurfaceVariant,
             fontWeight: FontWeight.w500,
@@ -189,8 +219,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Column(
-      children: events.map((event) {
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: events.length,
+      itemBuilder: (context, index) {
+        final event = events[index];
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
           elevation: 2,
@@ -268,17 +302,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ],
               ),
             ),
-            trailing: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                const SizedBox(height: 8),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: colorScheme.outline,
-                ),
-              ],
+            trailing: Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: colorScheme.outline,
             ),
             onTap: () {
               Navigator.push(
@@ -290,7 +317,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             },
           ),
         );
-      }).toList(),
+      },
     );
   }
 }

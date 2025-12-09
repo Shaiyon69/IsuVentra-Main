@@ -91,9 +91,12 @@ class AuthProvider with ChangeNotifier {
   Future<void> logout() async {
     try {
       await _api.post('/logout', {});
-    } catch (_) {}
-    await _storage.delete(key: 'token');
-    _user = null;
-    notifyListeners();
+    } catch (e) {
+      debugPrint("Logout API failed (ignoring): $e");
+    } finally {
+      await _storage.delete(key: 'token');
+      _user = null;
+      notifyListeners();
+    }
   }
 }

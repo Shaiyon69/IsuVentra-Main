@@ -4,10 +4,9 @@ import 'package:intl/intl.dart';
 import '../providers/event_provider.dart';
 import '../providers/auth_provider.dart';
 import '../models/user_model.dart';
-import '../models/event_model.dart';
 import 'admin_qr_scanner_screen.dart';
 import 'event_creation_screen.dart';
-import 'event_attendees_screen.dart';
+import '../screens/view_event.dart';
 
 class AdminEventManagementScreen extends StatefulWidget {
   final bool limitTo10;
@@ -305,8 +304,7 @@ class _AdminEventManagementScreenState
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) =>
-                              EventAttendeesScreen(event: event as Event),
+                          builder: (context) => ViewEventScreen(event: event),
                         ),
                       );
                     },

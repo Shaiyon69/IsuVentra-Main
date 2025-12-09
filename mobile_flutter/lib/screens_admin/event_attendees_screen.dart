@@ -4,10 +4,10 @@ import 'package:intl/intl.dart';
 import '../providers/participation_provider.dart';
 import '../models/event_model.dart';
 import '../models/participation_model.dart';
+import '../screens_admin/admin_qr_scanner_screen.dart';
 
 class EventAttendeesScreen extends StatefulWidget {
   final Event event;
-
   const EventAttendeesScreen({super.key, required this.event});
 
   @override
@@ -17,21 +17,37 @@ class EventAttendeesScreen extends StatefulWidget {
 class _EventAttendeesScreenState extends State<EventAttendeesScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<ParticipationProvider>(
-        context,
-        listen: false,
-      ).fetchParticipations();
-      _searchController.addListener(() {
-        if (!mounted) return;
-        setState(() {
-          _searchQuery = _searchController.text.trim().toLowerCase();
-        });
-      });
+      _refreshList();
     });
+    _searchController.addListener(() {
+      if (mounted)
+        setState(
+          () => _searchQuery = _searchController.text.trim().toLowerCase(),
+        );
+    });
+  }
+
+  Future<void> _refreshList() async {
+    await Provider.of<ParticipationProvider>(
+      context,
+      listen: false,
+    ).fetchParticipations();
+  }
+
+  Future<void> _handleScan() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AdminQRScannerScreen(event: widget.event),
+      ),
+    );
+    // Refresh list when scanner closes
+    if (mounted) _refreshList();
   }
 
   @override
@@ -48,281 +64,115 @@ class _EventAttendeesScreenState extends State<EventAttendeesScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          widget.event.title,
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: colorScheme.onSurface,
-          ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Attendees', style: TextStyle(fontSize: 16)),
+            Text(
+              widget.event.title,
+              style: TextStyle(
+                fontSize: 14,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
         ),
-        elevation: 0,
-        backgroundColor: colorScheme.surface,
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _handleScan,
+        icon: const Icon(Icons.qr_code_scanner),
+        label: const Text('Scan Student'),
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
       ),
       body: Consumer<ParticipationProvider>(
         builder: (context, provider, child) {
-          if (provider.isLoading) {
-            return Center(
-              child: CircularProgressIndicator(color: colorScheme.primary),
-            );
-          }
+          if (provider.isLoading)
+            return const Center(child: CircularProgressIndicator());
 
-          if (provider.errorMessage != null) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline, size: 48, color: colorScheme.error),
-                  const SizedBox(height: 16),
-                  Text(provider.errorMessage!),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () => provider.fetchParticipations(),
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
-            );
-          }
-
+          // Filter participants by this event ID
           final eventParticipations = provider.getParticipationsForEvent(
             widget.event.id,
           );
 
-          final filteredParticipations = _searchQuery.isEmpty
+          final filtered = _searchQuery.isEmpty
               ? eventParticipations
-              : eventParticipations.where((p) {
-                  final q = _searchQuery;
-                  final name = p.studentName.toLowerCase();
-                  final sid = p.studentId.toString().toLowerCase();
-                  return name.contains(q) || sid.contains(q);
-                }).toList();
+              : eventParticipations
+                    .where(
+                      (p) =>
+                          p.studentName.toLowerCase().contains(_searchQuery) ||
+                          p.studentId.toString().contains(_searchQuery),
+                    )
+                    .toList();
 
-          if (eventParticipations.isEmpty) {
+          // Sort by latest activity
+          filtered.sort((a, b) {
+            final aTime = a.timeOut ?? a.timeIn ?? DateTime(2000);
+            final bTime = b.timeOut ?? b.timeIn ?? DateTime(2000);
+            return bTime.compareTo(aTime);
+          });
+
+          if (filtered.isEmpty) {
             return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.people_outline,
-                      size: 64,
-                      color: colorScheme.outline,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No Attendees',
-                      style: textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'No students have checked in for this event.',
-                      textAlign: TextAlign.center,
-                      style: textTheme.bodyMedium,
-                    ),
-                  ],
+              child: Text(
+                'No Attendees Yet',
+                style: textTheme.titleMedium?.copyWith(
+                  color: colorScheme.outline,
                 ),
               ),
             );
           }
 
           return RefreshIndicator(
-            onRefresh: () => provider.fetchParticipations(),
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.search),
-                      hintText: 'Search by name or student ID',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      filled: true,
-                      fillColor: Theme.of(
-                        context,
-                      ).colorScheme.surfaceContainerHighest,
+            onRefresh: _refreshList,
+            child: ListView.separated(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+              itemCount: filtered.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final p = filtered[index];
+                String initials = 'S';
+                if (p.studentName.isNotEmpty)
+                  initials = p.studentName[0].toUpperCase();
+
+                return Card(
+                  child: ListTile(
+                    leading: CircleAvatar(child: Text(initials)),
+                    title: Text(
+                      p.studentName,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text('ID: ${p.studentId}'),
+                    trailing: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        if (p.timeIn != null)
+                          Text(
+                            'IN: ${DateFormat("h:mm a").format(p.timeIn!)}',
+                            style: TextStyle(
+                              color: Colors.green[700],
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        if (p.timeOut != null)
+                          Text(
+                            'OUT: ${DateFormat("h:mm a").format(p.timeOut!)}',
+                            style: TextStyle(
+                              color: Colors.orange[800],
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                      ],
                     ),
                   ),
-                ),
-                Expanded(
-                  child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                    itemCount: filteredParticipations.length,
-                    separatorBuilder: (context, index) =>
-                        const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final participation = filteredParticipations[index];
-                      return _buildAttendeeCard(
-                        theme,
-                        participation,
-                        colorScheme,
-                        textTheme,
-                      );
-                    },
-                  ),
-                ),
-              ],
+                );
+              },
             ),
           );
         },
-      ),
-    );
-  }
-
-  Widget _buildAttendeeCard(
-    ThemeData theme,
-    Participation participation,
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-  ) {
-    // Simplified card: avatar, name + ID, times, and compact badges
-    final initials = participation.studentName.isNotEmpty
-        ? participation.studentName
-              .trim()
-              .split(' ')
-              .map((s) => s.isNotEmpty ? s[0] : '')
-              .take(2)
-              .join()
-        : 'S';
-
-    return Card(
-      elevation: 1,
-      color: colorScheme.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 22,
-              backgroundColor: colorScheme.primaryContainer,
-              child: Text(
-                initials,
-                style: textTheme.titleMedium?.copyWith(
-                  color: colorScheme.onPrimaryContainer,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    participation.studentName,
-                    style: textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'ID: ${participation.studentId}',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      if (participation.timeIn != null)
-                        Text(
-                          DateFormat(
-                            "h:mm a",
-                          ).format(participation.timeIn!.toLocal()),
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colorScheme.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        )
-                      else
-                        Text(
-                          '-',
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      const SizedBox(width: 12),
-                      if (participation.timeOut != null)
-                        Text(
-                          DateFormat(
-                            "h:mm a",
-                          ).format(participation.timeOut!.toLocal()),
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colorScheme.tertiary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        )
-                      else
-                        Text(
-                          '-',
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 6,
-                  ),
-                  margin: const EdgeInsets.only(bottom: 6),
-                  decoration: BoxDecoration(
-                    color: participation.timeIn != null
-                        ? colorScheme.secondaryContainer
-                        : colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    'IN',
-                    style: textTheme.labelSmall?.copyWith(
-                      color: participation.timeIn != null
-                          ? colorScheme.onSecondaryContainer
-                          : colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: participation.timeOut != null
-                        ? colorScheme.tertiaryContainer
-                        : colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    'OUT',
-                    style: textTheme.labelSmall?.copyWith(
-                      color: participation.timeOut != null
-                          ? colorScheme.onTertiaryContainer
-                          : colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }
