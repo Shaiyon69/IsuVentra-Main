@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../screens/home_screen.dart';
-import '../screens_admin/admin_home_screen.dart'; // Import the new Admin Home
+import '../screens_admin/admin_home_screen.dart';
 import '../providers/auth_provider.dart';
+import '../models/user_model.dart'; // REQUIRED: Import UserRole
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -14,7 +15,6 @@ class Login extends StatefulWidget {
 class _LoginState extends State<Login> {
   final _formKey = GlobalKey<FormState>();
 
-  // Renamed controllers to be generic for both modes
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
@@ -40,15 +40,19 @@ class _LoginState extends State<Login> {
       if (!mounted) return;
 
       if (isLoggedIn) {
-        _navigateBasedOnRole(auth.user?.adminLevel ?? 0);
+        // FIX: Navigate based on UserRole
+        _navigateBasedOnRole(auth.user?.role);
       } else {
         setState(() => _isCheckingAuth = false);
       }
     });
   }
 
-  void _navigateBasedOnRole(int adminLevel) {
-    final isAdmin = adminLevel > 0;
+  // FIX: Updated function signature to use UserRole?
+  void _navigateBasedOnRole(UserRole? role) {
+    // Admin covers both organizer (admin) and super admin
+    final isAdmin = role == UserRole.admin || role == UserRole.superAdmin;
+
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -74,8 +78,9 @@ class _LoginState extends State<Login> {
     if (!mounted) return;
 
     if (success) {
-      final adminLevel = auth.user?.adminLevel ?? 0;
-      _navigateBasedOnRole(adminLevel);
+      // FIX: Use UserRole for navigation
+      final role = auth.user?.role;
+      _navigateBasedOnRole(role);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -347,7 +352,7 @@ class _LoginState extends State<Login> {
       onTap: () {
         setState(() {
           _isAdminLogin = isForAdmin;
-          _formKey.currentState?.reset(); // Clear errors when switching
+          _formKey.currentState?.reset();
           _usernameController.clear();
           _passwordController.clear();
         });
@@ -360,7 +365,7 @@ class _LoginState extends State<Login> {
           borderRadius: BorderRadius.circular(6),
           boxShadow: isSelected
               ? [
-                  BoxShadow(
+                  const BoxShadow(
                     color: Colors.black12,
                     blurRadius: 4,
                     offset: Offset(0, 1),

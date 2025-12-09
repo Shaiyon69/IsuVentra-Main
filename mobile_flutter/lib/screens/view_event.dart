@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/event_model.dart';
+import '../screens/student_qr_code_screen.dart'; // Ensure this import is correct
 
 class ViewEventScreen extends StatelessWidget {
   final Event event;
@@ -36,7 +37,7 @@ class ViewEventScreen extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: textTheme.labelSmall?.copyWith(
+                style: textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w500,
                 ),
@@ -44,7 +45,7 @@ class ViewEventScreen extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 value,
-                style: textTheme.bodyMedium?.copyWith(
+                style: textTheme.titleMedium?.copyWith(
                   color: colorScheme.onSurface,
                   fontWeight: FontWeight.w600,
                 ),
@@ -79,7 +80,6 @@ class ViewEventScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Event Title
             Text(
               event.title,
               style: textTheme.headlineMedium?.copyWith(
@@ -89,7 +89,6 @@ class ViewEventScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
 
-            // Status Chip
             Chip(
               label: Text(isUpcoming ? 'UPCOMING' : 'PAST EVENT'),
               backgroundColor: isUpcoming
@@ -106,7 +105,6 @@ class ViewEventScreen extends StatelessWidget {
             ),
             const SizedBox(height: 32),
 
-            // Event Description
             if (event.description != null && event.description!.isNotEmpty)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -127,63 +125,62 @@ class ViewEventScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 32),
+
+                  Card(
+                    elevation: 0,
+                    color: colorScheme.surfaceContainerHigh,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Schedule & Venue',
+                            style: textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: colorScheme.primary,
+                            ),
+                          ),
+                          const Divider(height: 28),
+
+                          _buildInfoItem(
+                            context,
+                            Icons.calendar_month,
+                            'Date',
+                            DateFormat(
+                              'EEEE, MMM d, yyyy',
+                            ).format(event.timeStart),
+                            colorScheme.primary,
+                          ),
+                          const SizedBox(height: 20),
+
+                          _buildInfoItem(
+                            context,
+                            Icons.schedule,
+                            'Time',
+                            '${DateFormat('h:mm a').format(event.timeStart)} - ${DateFormat('h:mm a').format(event.timeEnd)}',
+                            colorScheme.secondary,
+                          ),
+                          const SizedBox(height: 20),
+
+                          if (event.location != null &&
+                              event.location!.isNotEmpty)
+                            _buildInfoItem(
+                              context,
+                              Icons.location_on,
+                              'Location',
+                              event.location!,
+                              colorScheme.tertiary,
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
-
-            // Event Details Card
-            Card(
-              elevation: 0,
-              color: colorScheme.surfaceContainerHigh,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Schedule & Venue',
-                      style: textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.primary,
-                      ),
-                    ),
-                    const Divider(height: 28),
-
-                    // Date
-                    _buildInfoItem(
-                      context,
-                      Icons.calendar_month,
-                      'Date',
-                      DateFormat('EEEE, MMM d, yyyy').format(event.timeStart),
-                      colorScheme.primary,
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Time
-                    _buildInfoItem(
-                      context,
-                      Icons.schedule,
-                      'Time',
-                      '${DateFormat('h:mm a').format(event.timeStart)} - ${DateFormat('h:mm a').format(event.timeEnd)}',
-                      colorScheme.secondary,
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Location
-                    if (event.location != null && event.location!.isNotEmpty)
-                      _buildInfoItem(
-                        context,
-                        Icons.location_on,
-                        'Location',
-                        event.location!,
-                        colorScheme.tertiary,
-                      ),
-                  ],
-                ),
-              ),
-            ),
           ],
         ),
       ),

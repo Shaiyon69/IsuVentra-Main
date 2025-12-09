@@ -5,6 +5,7 @@ class Event {
   final DateTime timeStart;
   final DateTime timeEnd;
   final String? location;
+  final int organizerId; // Added for RBAC filtering
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -15,6 +16,7 @@ class Event {
     required this.timeStart,
     required this.timeEnd,
     this.location,
+    required this.organizerId,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -27,6 +29,8 @@ class Event {
       timeStart: DateTime.parse(json['time_start']),
       timeEnd: DateTime.parse(json['time_end']),
       location: json['location'],
+      // Default to 0 if null to prevent crashes, implies unassigned
+      organizerId: json['organizer_id'] ?? 0,
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
     );

@@ -49,7 +49,7 @@ class _EventAttendeesScreenState extends State<EventAttendeesScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          '${widget.event.title}',
+          widget.event.title,
           style: TextStyle(
             fontWeight: FontWeight.w600,
             color: colorScheme.onSurface,
@@ -111,7 +111,7 @@ class _EventAttendeesScreenState extends State<EventAttendeesScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'No Attendees Yet',
+                      'No Attendees',
                       style: textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -144,7 +144,9 @@ class _EventAttendeesScreenState extends State<EventAttendeesScreen> {
                         borderSide: BorderSide.none,
                       ),
                       filled: true,
-                      fillColor: Theme.of(context).colorScheme.surfaceVariant,
+                      fillColor: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
                     ),
                   ),
                 ),
@@ -283,7 +285,7 @@ class _EventAttendeesScreenState extends State<EventAttendeesScreen> {
                   decoration: BoxDecoration(
                     color: participation.timeIn != null
                         ? colorScheme.secondaryContainer
-                        : colorScheme.surfaceVariant,
+                        : colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -304,7 +306,7 @@ class _EventAttendeesScreenState extends State<EventAttendeesScreen> {
                   decoration: BoxDecoration(
                     color: participation.timeOut != null
                         ? colorScheme.tertiaryContainer
-                        : colorScheme.surfaceVariant,
+                        : colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(

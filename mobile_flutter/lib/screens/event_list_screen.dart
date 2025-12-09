@@ -5,8 +5,6 @@ import '../providers/event_provider.dart';
 import '../models/event_model.dart';
 import 'view_event.dart';
 
-enum SortMode { upcoming, ongoing, finished }
-
 class EventListScreen extends StatefulWidget {
   final VoidCallback? onSwitchToQR;
 
@@ -37,22 +35,21 @@ class _EventListScreenState extends State<EventListScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<EventProvider>(context);
-    final events = provider.events;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
 
-    // Base filter by search
-    List<Event> base = events
-        .where(
-          (event) =>
-              event.title.toLowerCase().contains(_searchQuery.toLowerCase()),
-        )
-        .toList();
+    final now = DateTime.now();
 
-    // Simple search + recent sorting (most recently created first), limit 10
-    base.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    final filteredEvents = base.take(10).toList();
+    final activeEvents = provider.events.where((event) {
+      return event.timeEnd.isAfter(now);
+    }).toList();
+
+    final filteredEvents = activeEvents.where((event) {
+      return event.title.toLowerCase().contains(_searchQuery.toLowerCase());
+    }).toList();
+
+    filteredEvents.sort((a, b) => a.timeStart.compareTo(b.timeStart));
 
     if (provider.isLoading) {
       return Center(
@@ -108,13 +105,12 @@ class _EventListScreenState extends State<EventListScreen> {
               },
             ),
           ),
-          const SizedBox(height: 8),
           Expanded(
             child: filteredEvents.isEmpty
                 ? Center(
                     child: Text(
                       _searchQuery.isEmpty
-                          ? 'No events available'
+                          ? 'No upcoming events.'
                           : 'No events found for "$_searchQuery"',
                       style: textTheme.titleMedium?.copyWith(
                         color: colorScheme.onSurfaceVariant,
@@ -125,10 +121,7 @@ class _EventListScreenState extends State<EventListScreen> {
                 : RefreshIndicator(
                     onRefresh: () => provider.fetchEvents(),
                     child: ListView.separated(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                       itemCount: filteredEvents.length,
                       separatorBuilder: (context, index) =>
                           const SizedBox(height: 16),
@@ -144,14 +137,9 @@ class _EventListScreenState extends State<EventListScreen> {
     );
   }
 
-  Widget _buildEventCard(ThemeData theme, dynamic event) {
+  Widget _buildEventCard(ThemeData theme, Event event) {
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
-
-    final isUpcoming = event.timeStart.isAfter(DateTime.now());
-    final statusColor = isUpcoming
-        ? colorScheme.secondary
-        : colorScheme.outline;
 
     return Card(
       elevation: 2,
@@ -187,7 +175,11 @@ class _EventListScreenState extends State<EventListScreen> {
 
             Row(
               children: [
-                Icon(Icons.calendar_month, size: 16, color: statusColor),
+                Icon(
+                  Icons.calendar_month,
+                  size: 16,
+                  color: colorScheme.secondary,
+                ),
                 const SizedBox(width: 6),
                 Text(
                   DateFormat('MMM d, yyyy').format(event.timeStart),
@@ -197,7 +189,7 @@ class _EventListScreenState extends State<EventListScreen> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                Icon(Icons.access_time, size: 16, color: statusColor),
+                Icon(Icons.access_time, size: 16, color: colorScheme.secondary),
                 const SizedBox(width: 6),
                 Text(
                   "${DateFormat('h:mm a').format(event.timeStart)} - ${DateFormat('h:mm a').format(event.timeEnd)}",
@@ -216,7 +208,7 @@ class _EventListScreenState extends State<EventListScreen> {
                   Icon(
                     Icons.location_on_outlined,
                     size: 16,
-                    color: statusColor,
+                    color: colorScheme.secondary,
                   ),
                   const SizedBox(width: 6),
                   Expanded(
@@ -247,8 +239,7 @@ class _EventListScreenState extends State<EventListScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) =>
-                              ViewEventScreen(event: event as Event),
+                          builder: (context) => ViewEventScreen(event: event),
                         ),
                       );
                     },

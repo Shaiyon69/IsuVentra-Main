@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/event_provider.dart';
+import '../providers/auth_provider.dart';
+import '../models/user_model.dart';
 import '../models/event_model.dart';
 import 'admin_qr_scanner_screen.dart';
 import 'event_creation_screen.dart';
@@ -26,8 +28,16 @@ class _AdminEventManagementScreenState
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<EventProvider>(context, listen: false).fetchEvents();
+      _fetchData();
     });
+  }
+
+  void _fetchData() {
+    final user = context.read<AuthProvider>().user;
+    context.read<EventProvider>().fetchEvents(
+      userId: user?.id,
+      role: user?.role,
+    );
   }
 
   @override
@@ -37,32 +47,54 @@ class _AdminEventManagementScreenState
   }
 
   void _navigateToCreateEvent() {
-    final provider = Provider.of<EventProvider>(context, listen: false);
     Navigator.of(context)
         .push(
           MaterialPageRoute(builder: (context) => const EventCreationScreen()),
         )
         .then((result) {
           if (result == true) {
-            provider.fetchEvents();
+            _fetchData();
           }
         });
   }
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+    // Logic: Only Super Admin can create events
+    final canCreateEvent = authProvider.user?.role == UserRole.superAdmin;
+
     final provider = Provider.of<EventProvider>(context);
-    final allEvents = provider.searchAndSortEvents(_searchQuery);
-    final events = widget.limitTo10 ? allEvents.take(10).toList() : allEvents;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
 
+    final now = DateTime.now();
+    final allEvents = provider.events;
+
+    // Show active events for management/scanning
+    final activeEvents = allEvents.where((e) {
+      return e.timeEnd.isAfter(now);
+    }).toList();
+
+    final filteredEvents = activeEvents.where((e) {
+      return e.title.toLowerCase().contains(_searchQuery.toLowerCase());
+    }).toList();
+
+    filteredEvents.sort((a, b) => a.timeStart.compareTo(b.timeStart));
+
+    final events = widget.limitTo10
+        ? filteredEvents.take(10).toList()
+        : filteredEvents;
+
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        onPressed: _navigateToCreateEvent,
-        child: const Icon(Icons.add),
-      ),
+      // Hide FAB if not Super Admin
+      floatingActionButton: canCreateEvent
+          ? FloatingActionButton(
+              onPressed: _navigateToCreateEvent,
+              child: const Icon(Icons.add),
+            )
+          : null,
       body: Column(
         children: [
           Padding(
@@ -70,7 +102,7 @@ class _AdminEventManagementScreenState
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search events...',
+                hintText: 'Search active events...',
                 prefixIcon: Icon(
                   Icons.search,
                   color: colorScheme.onSurfaceVariant,
@@ -122,10 +154,7 @@ class _AdminEventManagementScreenState
             const SizedBox(height: 16),
             Text(provider.errorMessage!),
             const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => provider.fetchEvents(),
-              child: const Text('Retry'),
-            ),
+            ElevatedButton(onPressed: _fetchData, child: const Text('Retry')),
           ],
         ),
       );
@@ -138,10 +167,10 @@ class _AdminEventManagementScreenState
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.event_busy, size: 64, color: colorScheme.outline),
+              Icon(Icons.event_available, size: 64, color: colorScheme.outline),
               const SizedBox(height: 16),
               Text(
-                'No Events Scheduled',
+                'No Active Events',
                 style: textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -149,8 +178,8 @@ class _AdminEventManagementScreenState
               const SizedBox(height: 8),
               Text(
                 _searchQuery.isEmpty
-                    ? 'Tap the "+" button to get started.'
-                    : 'No events found for "$_searchQuery".',
+                    ? 'No events assigned or scheduled.'
+                    : 'No matching events found.',
                 textAlign: TextAlign.center,
                 style: textTheme.bodyMedium,
               ),
@@ -161,7 +190,7 @@ class _AdminEventManagementScreenState
     }
 
     return RefreshIndicator(
-      onRefresh: () => provider.fetchEvents(),
+      onRefresh: () async => _fetchData(),
       child: ListView.separated(
         padding: const EdgeInsets.all(16),
         itemCount: events.length,
@@ -178,11 +207,6 @@ class _AdminEventManagementScreenState
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
 
-    final isUpcoming = event.timeStart.isAfter(DateTime.now());
-    final statusColor = isUpcoming
-        ? colorScheme.secondary
-        : colorScheme.outline;
-
     return Card(
       elevation: 2,
       color: colorScheme.surfaceContainerHigh,
@@ -194,7 +218,7 @@ class _AdminEventManagementScreenState
           children: [
             Text(
               event.title,
-              style: textTheme.titleLarge?.copyWith(
+              style: textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: colorScheme.onSurface,
               ),
@@ -217,7 +241,11 @@ class _AdminEventManagementScreenState
 
             Row(
               children: [
-                Icon(Icons.calendar_month, size: 16, color: statusColor),
+                Icon(
+                  Icons.calendar_month,
+                  size: 16,
+                  color: colorScheme.secondary,
+                ),
                 const SizedBox(width: 6),
                 Text(
                   DateFormat('MMM d, yyyy').format(event.timeStart),
@@ -227,7 +255,7 @@ class _AdminEventManagementScreenState
                   ),
                 ),
                 const SizedBox(width: 12),
-                Icon(Icons.access_time, size: 16, color: statusColor),
+                Icon(Icons.access_time, size: 16, color: colorScheme.secondary),
                 const SizedBox(width: 6),
                 Text(
                   "${DateFormat('h:mm a').format(event.timeStart)} - ${DateFormat('h:mm a').format(event.timeEnd)}",
@@ -246,7 +274,7 @@ class _AdminEventManagementScreenState
                   Icon(
                     Icons.location_on_outlined,
                     size: 16,
-                    color: statusColor,
+                    color: colorScheme.secondary,
                   ),
                   const SizedBox(width: 6),
                   Expanded(
