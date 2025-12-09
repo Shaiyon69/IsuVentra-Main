@@ -14,8 +14,8 @@ class ParticipationController extends Controller
     private function isAuthorized($user, $event)
     {
         if (!$event) return false;
-        if ($user->is_admin === 1) return true; // Super Admin
-        if ($user->is_admin === 2 && $event->managers()->where('user_id', $user->id)->exists()) {
+        if ($user->is_admin == 1) return true; // Super Admin
+        if ($user->is_admin == 2 && $event->managers()->where('user_id', $user->id)->exists()) {
             return true;
         }
         return false;
@@ -55,7 +55,7 @@ class ParticipationController extends Controller
                     'event_id' => $p->event_id,
                     'student_name' => $p->student ? $p->student->name : 'Unknown', 
                     'student_school_id' => $p->student ? $p->student->student_id : 'N/A',
-                    'event_name' => $p->event ? $p->event->title : 'Unknown', 
+                    'event_name' => $p->event ? $p->event->title : 'Unknown',   
                     'event_end' => $p->event ? $p->event->time_end : null,
                     
                     'time_in' => $p->time_in,
@@ -107,7 +107,6 @@ class ParticipationController extends Controller
      */
     public function scan(Request $request)
     {
-        // 1. Validation: Expecting 'student_id' to be the String form (e.g., "2023-001")
         $request->validate([
             'event_id' => 'required|exists:events,id',
             'student_id' => 'required' 
@@ -123,10 +122,16 @@ class ParticipationController extends Controller
         return DB::transaction(function () use ($request) {
             $scannedId = $request->input('student_id'); 
             
-            // 2. Find Student by SCHOOL ID String
-            $student = Student::where('student_id', $scannedId)->first();
+            // FIX: Try to find by Primary Key (ID) first (Flutter sends this)
+            $student = Student::find($scannedId);
+
+            // If not found, try to find by School ID String (Raw QR scan)
+            if (!$student) {
+                $student = Student::where('student_id', $scannedId)->first();
+            }
 
             if (!$student) {
+                // This 404 is what was causing your "Server Error: 404" in Flutter
                 return response()->json(['status' => 'error', 'message' => 'Student ID not found in database.'], 404);
             }
 
@@ -141,12 +146,11 @@ class ParticipationController extends Controller
                 return response()->json([
                     'status' => 'already_in', 
                     'message' => 'Student is already timed in.'
-                ]);
+                ], 422); // Use 422 so Flutter knows it's a logical "error" not a server error
             }
 
-            // Scenario: Already Completed (Time out is set)
+            // Scenario: Already Completed
             if ($existing && $existing->time_out !== null) {
-                // Determine logic: Allow re-entry? Or block? usually we block duplicate entries per event.
                  return response()->json([
                     'status' => 'error', 
                     'message' => 'Student has already completed this event.'
@@ -171,7 +175,7 @@ class ParticipationController extends Controller
     {
         $request->validate([
             'event_id' => 'required|exists:events,id',
-            'student_id' => 'required' // Expecting String ID (e.g. "2023-001")
+            'student_id' => 'required'
         ]);
 
         $user = $request->user();
@@ -184,17 +188,20 @@ class ParticipationController extends Controller
         return DB::transaction(function () use ($request) {
             $scannedId = $request->input('student_id'); 
             
-            // 1. Find Student by SCHOOL ID String
-            $student = Student::where('student_id', $scannedId)->first();
-            
+            // FIX: Same robust check here
+            $student = Student::find($scannedId);
             if (!$student) {
-                 return response()->json(['status' => 'error', 'message' => 'Student ID required for timeout.'], 422);
+                $student = Student::where('student_id', $scannedId)->first();
             }
             
-            // 2. Find Participation using resolved Primary Key ($student->id)
+            if (!$student) {
+                 return response()->json(['status' => 'error', 'message' => 'Student ID required for timeout.'], 404);
+            }
+            
+            // 2. Find Participation
             $participation = Participation::where('student_id', $student->id)
                 ->where('event_id', $request->event_id)
-                ->whereNull('time_out') // Only find sessions that are still active
+                ->whereNull('time_out')
                 ->lockForUpdate()
                 ->first();
 

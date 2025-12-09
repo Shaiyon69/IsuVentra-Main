@@ -57,7 +57,8 @@
         <div class="log-list">
           <div v-for="(log, index) in logs" :key="index" class="log-item" :class="log.status">
             <div class="log-content">
-              <span class="log-id">{{ log.student_id }}</span>
+              <span class="log-name">{{ log.name }}</span>
+              <small class="log-sub-id">{{ log.school_id }}</small>
               <span class="log-msg">{{ log.message }}</span>
             </div>
             <span class="log-time">{{ log.time }}</span>
@@ -258,13 +259,13 @@ const prepareConfirmation = async (studentId) => {
     
     // Set Student Data
     studentDetails.value = {
-        name: studentRes.data.name,        
-        year: studentRes.data.year_lvl,  
-        course: studentRes.data.course,    
-        department: studentRes.data.department,
-        profile_url: studentRes.data.profile_url || null
+      id: studentRes.data.id, // 👈 ADD THIS LINE (Capture the Database PK)
+      name: studentRes.data.name,        
+      year: studentRes.data.year_lvl,  
+      course: studentRes.data.course,    
+      department: studentRes.data.department,
+      profile_url: studentRes.data.profile_url || null
     };
-
     // Set Status ('active', 'none', 'completed')
     currentParticipationStatus.value = statusRes.data.status;
 
@@ -290,27 +291,31 @@ const cancelScan = () => {
 // 3. Execute Action based on Status
 const executeAction = async () => {
   showConfirmModal.value = false; 
-  const studentId = scannedStudentId.value;
+  
+  // 1. Capture details BEFORE clearing variables
+  const dbId = studentDetails.value.id;       // For Backend (e.g., 55)
+  const name = studentDetails.value.name;     // For Log (e.g., "John Doe")
+  const schoolId = scannedStudentId.value;    // For Log (e.g., "2023-005")
+  
   const status = currentParticipationStatus.value;
 
   try {
     let res;
     
     if (status === 'none' || status === 'not_found') {
-        // --- TIME IN ---
         res = await api.post("/participations/scan", {
             event_id: selectedEventId.value,
-            student_id: studentId
+            student_id: dbId 
         });
-        addLog(studentId, "Checked In", "success");
+        // Pass Name + ID to log
+        addLog(name, schoolId, "Checked In", "success");
     } 
     else if (status === 'active') {
-        // --- TIME OUT ---
         res = await api.post("/participations/out", { 
             event_id: selectedEventId.value, 
-            student_id: studentId 
+            student_id: dbId 
         });
-        addLog(studentId, "Timed Out", "warning");
+        addLog(name, schoolId, "Timed Out", "warning");
     }
 
   } catch (err) {
@@ -318,16 +323,18 @@ const executeAction = async () => {
     if (err.response && err.response.data && err.response.data.message) {
       errorMsg = err.response.data.message;
     }
-    addLog(studentId, errorMsg, "error");
+    // Pass Name + ID to log even on error
+    addLog(name, schoolId, errorMsg, "error");
   }
 };
 
-const addLog = (id, msg, status) => {
+const addLog = (name, schoolId, msg, status) => {
   logs.value.unshift({
-    student_id: id,
+    name: name,
+    school_id: schoolId,
     message: msg,
     status: status,
-    time: new Date().toLocaleTimeString()
+    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   });
   if (logs.value.length > 10) logs.value.pop();
 };
