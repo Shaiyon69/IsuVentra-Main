@@ -138,8 +138,12 @@ class _AdminQRScannerScreenState extends State<AdminQRScannerScreen> {
             listen: false,
           );
 
+          // CRITICAL FIX HERE:
+          // DO NOT use student.id (Internal Database PK, e.g., 45)
+          // USE student.studentId (School ID, e.g., "2023-005")
+
           await participationProvider.adminRecordParticipation(
-            student.id,
+            student.studentId, // <--- This must match the scanned string
             widget.event!.id,
             studentName: student.name,
           );
