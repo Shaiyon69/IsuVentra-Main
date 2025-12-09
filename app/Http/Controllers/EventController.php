@@ -43,13 +43,28 @@ class EventController extends Controller
     /**
      * Get lightweight list for dropdowns (No Pagination)
      */
-    public function listAll()
-    {
-        // Only fetch ID and Title
-        $events = Event::select('id', 'title')
-            ->orderBy('title')
-            ->get();
+    // public function listAll()
+    // {
+    //     // Only fetch ID and Title
+    //     $events = Event::select('id', 'title', 'time_start', 'time_end')
+    //         ->orderBy('title')
+    //         ->get();
 
+    //     return response()->json($events);
+    // }
+
+    public function listAll(Request $request)
+    {
+        $query = Event::select('id', 'title', 'time_start', 'time_end')
+            ->orderBy('title');
+
+        if ($request->has('ongoing')) {
+            $now = now(); // Current Server Time
+            $query->where('time_start', '<=', $now)
+                  ->where('time_end', '>=', $now);
+        }
+
+        $events = $query->get();
         return response()->json($events);
     }
 

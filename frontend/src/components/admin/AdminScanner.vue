@@ -191,10 +191,13 @@ let controls = null;
 
 onMounted(async () => {
   try {
-    const res = await api.get('/list/events');
+    const res = await api.get('/list/events', { 
+        params: { ongoing: true } 
+    });
+    
     events.value = res.data;
   } catch (e) {
-    error.value = "Failed to load events list.";
+    error.value = "Failed to load active events list.";
   }
 });
 
