@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../screens/home_screen.dart';
 import '../screens_admin/admin_home_screen.dart';
 import '../providers/auth_provider.dart';
-import '../models/user_model.dart'; // REQUIRED: Import UserRole
+import '../models/user_model.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -15,13 +15,11 @@ class Login extends StatefulWidget {
 class _LoginState extends State<Login> {
   final _formKey = GlobalKey<FormState>();
 
-  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _identifierController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
-  bool _rememberMe = false;
   bool _isCheckingAuth = true;
-  bool _isAdminLogin = false; // Toggle state
 
   @override
   void initState() {
@@ -29,18 +27,13 @@ class _LoginState extends State<Login> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final auth = context.read<AuthProvider>();
 
-      if (auth.savedEmail != null) {
-        _usernameController.text = auth.savedEmail!;
-        if (mounted) {
-          setState(() => _rememberMe = auth.rememberMe);
-        }
-      }
+      // Removed the logic that pre-fills email based on "Saved" preferences
+
       final isLoggedIn = await auth.tryAutoLogin();
 
       if (!mounted) return;
 
       if (isLoggedIn) {
-        // FIX: Navigate based on UserRole
         _navigateBasedOnRole(auth.user?.role);
       } else {
         setState(() => _isCheckingAuth = false);
@@ -48,9 +41,7 @@ class _LoginState extends State<Login> {
     });
   }
 
-  // FIX: Updated function signature to use UserRole?
   void _navigateBasedOnRole(UserRole? role) {
-    // Admin covers both organizer (admin) and super admin
     final isAdmin = role == UserRole.admin || role == UserRole.superAdmin;
 
     Navigator.pushReplacement(
@@ -65,29 +56,23 @@ class _LoginState extends State<Login> {
   Future<void> _performLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final identifier = _usernameController.text.trim();
+    final identifier = _identifierController.text.trim();
     final password = _passwordController.text.trim();
     final auth = context.read<AuthProvider>();
 
-    final success = await auth.login(
-      identifier,
-      password,
-      remember: _rememberMe,
-    );
+    // Removed "remember" argument since the UI feature is removed
+    final success = await auth.login(identifier, password);
 
     if (!mounted) return;
 
     if (success) {
-      // FIX: Use UserRole for navigation
       final role = auth.user?.role;
       _navigateBasedOnRole(role);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text(
-            _isAdminLogin
-                ? 'Invalid Admin Credentials'
-                : 'Invalid Student ID or LRN',
+            'Invalid credentials. Please check your ID/Email and Password.',
           ),
           backgroundColor: Colors.red,
         ),
@@ -97,7 +82,7 @@ class _LoginState extends State<Login> {
 
   @override
   void dispose() {
-    _usernameController.dispose();
+    _identifierController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -153,12 +138,12 @@ class _LoginState extends State<Login> {
                       elevation: 16,
                       color: Colors.white,
                       child: Padding(
-                        padding: const EdgeInsets.all(20),
+                        padding: const EdgeInsets.all(24), // Increased padding
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 10),
 
                             // Logo Area
                             Center(
@@ -178,87 +163,59 @@ class _LoginState extends State<Login> {
                                   const Text(
                                     'ISUVENTRA',
                                     style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w600,
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Sign in to continue',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[600],
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 18),
-
-                            // Role Toggle
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade100,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.grey.shade300),
-                              ),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildRoleButton('Student', false),
-                                  ),
-                                  Expanded(
-                                    child: _buildRoleButton('Admin', true),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 18),
+                            const SizedBox(height: 32),
 
                             // Form
                             Form(
                               key: _formKey,
                               child: Column(
                                 children: [
-                                  // Username / Student ID Field
+                                  // Unified Identity Field
                                   TextFormField(
-                                    controller: _usernameController,
-                                    keyboardType: _isAdminLogin
-                                        ? TextInputType.emailAddress
-                                        : TextInputType.text,
-                                    decoration: InputDecoration(
-                                      prefixIcon: Icon(
-                                        _isAdminLogin
-                                            ? Icons.email_outlined
-                                            : Icons.badge_outlined,
-                                      ),
-                                      labelText: _isAdminLogin
-                                          ? 'Email Address'
-                                          : 'Student ID',
-                                      hintText: _isAdminLogin
-                                          ? 'admin@isu.edu.ph'
-                                          : '25-XXXX',
-                                      border: const OutlineInputBorder(),
+                                    controller: _identifierController,
+                                    keyboardType: TextInputType.emailAddress,
+                                    decoration: const InputDecoration(
+                                      prefixIcon: Icon(Icons.person_outline),
+                                      labelText: 'Student ID or Email',
+                                      hintText: '25-XXXX or admin@isu.edu.ph',
+                                      border: OutlineInputBorder(),
                                     ),
                                     validator: (value) {
                                       if (value == null ||
                                           value.trim().isEmpty) {
-                                        return _isAdminLogin
-                                            ? 'Please enter your Email'
-                                            : 'Please enter your Student ID';
+                                        return 'Please enter your Student ID or Email';
                                       }
                                       return null;
                                     },
                                     enabled: !isLoading,
                                   ),
-                                  const SizedBox(height: 12),
+                                  const SizedBox(height: 16),
 
                                   // Password / LRN Field
                                   TextFormField(
                                     controller: _passwordController,
                                     obscureText: _obscurePassword,
-                                    keyboardType: _isAdminLogin
-                                        ? TextInputType.text
-                                        : TextInputType.number,
                                     decoration: InputDecoration(
                                       prefixIcon: const Icon(
                                         Icons.lock_outline,
                                       ),
-                                      labelText: _isAdminLogin
-                                          ? 'Password'
-                                          : 'LRN (Password)',
+                                      labelText: 'Password',
                                       border: const OutlineInputBorder(),
                                       suffixIcon: IconButton(
                                         icon: Icon(
@@ -274,39 +231,20 @@ class _LoginState extends State<Login> {
                                     ),
                                     validator: (value) {
                                       if (value == null || value.isEmpty) {
-                                        return _isAdminLogin
-                                            ? 'Please enter password'
-                                            : 'Please enter your LRN';
-                                      }
-                                      if (!_isAdminLogin && value.length < 6) {
-                                        return 'LRN must be at least 6 characters';
+                                        return 'Please enter your Password or LRN';
                                       }
                                       return null;
                                     },
                                     enabled: !isLoading,
                                   ),
-                                  const SizedBox(height: 10),
-
-                                  Row(
-                                    children: [
-                                      Checkbox(
-                                        value: _rememberMe,
-                                        onChanged: (v) => setState(
-                                          () => _rememberMe = v ?? false,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      const Text('Remember me'),
-                                    ],
-                                  ),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 24),
 
                             // Submit Button
                             SizedBox(
-                              height: 48,
+                              height: 50,
                               child: ElevatedButton(
                                 onPressed: isLoading ? null : _performLogin,
                                 style: ElevatedButton.styleFrom(
@@ -315,6 +253,7 @@ class _LoginState extends State<Login> {
                                   ),
                                   backgroundColor: theme.colorScheme.primary,
                                   foregroundColor: theme.colorScheme.onPrimary,
+                                  elevation: 2,
                                 ),
                                 child: isLoading
                                     ? SizedBox(
@@ -326,8 +265,11 @@ class _LoginState extends State<Login> {
                                         ),
                                       )
                                     : const Text(
-                                        'Sign In',
-                                        style: TextStyle(fontSize: 16),
+                                        'Login',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
                               ),
                             ),
@@ -340,45 +282,6 @@ class _LoginState extends State<Login> {
                 ),
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRoleButton(String title, bool isForAdmin) {
-    final isSelected = _isAdminLogin == isForAdmin;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _isAdminLogin = isForAdmin;
-          _formKey.currentState?.reset();
-          _usernameController.clear();
-          _passwordController.clear();
-        });
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
-          boxShadow: isSelected
-              ? [
-                  const BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 4,
-                    offset: Offset(0, 1),
-                  ),
-                ]
-              : [],
-        ),
-        child: Text(
-          title,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            color: isSelected ? Colors.black87 : Colors.black54,
           ),
         ),
       ),

@@ -18,16 +18,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadData();
+      _loadData(refresh: true);
     });
   }
 
-  void _loadData() {
+  void _loadData({bool refresh = false}) {
     final user = context.read<AuthProvider>().user;
-    // Pass user ID and role to filter dashboard data (Events, Stats)
     context.read<DashboardProvider>().loadDashboardData(
       userId: user?.id,
       role: user?.role,
+      refresh: refresh,
     );
   }
 
@@ -38,9 +38,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final textTheme = theme.textTheme;
     final provider = context.watch<DashboardProvider>();
 
+    // Provider already limits this to Top 5
+    final top5RecentEvents = provider.recentEvents;
+
     return Scaffold(
       body: RefreshIndicator(
-        onRefresh: () async => _loadData(),
+        onRefresh: () async => _loadData(refresh: true),
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
           physics: const AlwaysScrollableScrollPhysics(),
@@ -56,6 +59,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
               const SizedBox(height: 16),
 
+              // --- STATS GRID (Admin View: Totals) ---
               GridView.count(
                 crossAxisCount: 2,
                 crossAxisSpacing: 16,
@@ -80,16 +84,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ),
                   _buildAdminStat(
                     theme,
-                    'Active Scans Today',
+                    'Total Scans',
                     '${provider.scansCount}',
                     Icons.qr_code_scanner,
                     colorScheme.secondary,
                   ),
                   _buildAdminStat(
                     theme,
-                    'Events This Week',
-                    '${_getUpcomingEventsCount(provider.recentEvents)}',
-                    Icons.calendar_today,
+                    'Events Displayed',
+                    '${top5RecentEvents.length}',
+                    Icons.bar_chart,
                     Colors.purple.shade600,
                   ),
                 ],
@@ -98,7 +102,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               const SizedBox(height: 32),
 
               Text(
-                'Recent Events',
+                'Recent Events (Top 5)',
                 style: textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: colorScheme.onSurface,
@@ -106,11 +110,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
               const SizedBox(height: 12),
 
-              if (provider.isLoading)
+              // --- EVENTS LIST ---
+              if (provider.isLoading && top5RecentEvents.isEmpty)
                 Center(
-                  child: CircularProgressIndicator(color: colorScheme.primary),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: CircularProgressIndicator(
+                      color: colorScheme.primary,
+                    ),
+                  ),
                 )
-              else if (provider.recentEvents.isEmpty)
+              else if (top5RecentEvents.isEmpty)
                 _buildEmptyState(
                   theme,
                   icon: Icons.event_busy,
@@ -118,9 +128,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   subtitle: "Create or be assigned an event to get started",
                 )
               else
-                ...provider.recentEvents
-                    .take(5)
-                    .map((event) => _buildEventCard(theme, event, provider)),
+                Column(
+                  children: top5RecentEvents
+                      .map((event) => _buildEventCard(theme, event, provider))
+                      .toList(),
+                ),
+
+              const SizedBox(height: 24),
             ],
           ),
         ),
@@ -288,15 +302,5 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ),
       ),
     );
-  }
-
-  int _getUpcomingEventsCount(List<Event> events) {
-    final now = DateTime.now();
-    final weekFromNow = now.add(const Duration(days: 7));
-
-    return events.where((event) {
-      return event.timeStart.isAfter(now) &&
-          event.timeStart.isBefore(weekFromNow);
-    }).length;
   }
 }
