@@ -8,9 +8,6 @@ use Illuminate\Support\Facades\Hash;
 
 class StudentAccountObserver
 {
-    /**
-     * Handle the Student "created" event.
-     */
     public function created(Student $student): void
     {
         if ($student->user_id) {

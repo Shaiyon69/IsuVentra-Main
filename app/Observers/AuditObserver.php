@@ -25,14 +25,13 @@ class AuditObserver
 
     private function saveLog($model, $action, $description)
     {
-        // Try to find a readable name (e.g. $event->title or $student->name)
-        // If not found, fallback to the ID (e.g. "Event #5")
+        // Try to find a readable name, if not found, fallback to the ID 
         $name = $model->name ?? $model->title ?? ('#' . $model->id);
 
         AuditLog::create([
-            'user_id'     => Auth::id(), // Current Admin ID
+            'user_id'     => Auth::id(), 
             'action'      => $action,
-            'activitylog' => "$description: $name", // e.g. "Created new Event: Tech Fest"
+            'activitylog' => "$description: $name", 
         ]);
     }
 }

@@ -10,7 +10,8 @@ use App\Models\Event;
 
 class ParticipationController extends Controller
 {
-    // --- HELPER: Permission Check ---
+
+    // Flutter helper func.
     private function isAuthorized($user, $event)
     {
         if (!$event) return false;
@@ -25,11 +26,9 @@ class ParticipationController extends Controller
     {
         $query = Participation::with(['student', 'event']);
 
-        // 1. Handle Search (Relational)
         if ($request->has('search') && $request->filled('search')) {
             $search = $request->input('search');
             
-            // Search inside related Student (name/ID) OR related Event (title)
             $query->where(function($q) use ($search) {
                 $q->whereHas('student', function($subQ) use ($search) {
                     $subQ->where('name', 'like', "%{$search}%")
@@ -41,10 +40,8 @@ class ParticipationController extends Controller
             });
         }
 
-        // 2. Sorting
         $query->orderBy('time_in', 'desc');
 
-        // 3. Dynamic Pagination
         $perPage = $request->input('per_page', 15);
 
         $participations = $query->paginate($perPage)
@@ -66,7 +63,6 @@ class ParticipationController extends Controller
         return response()->json($participations);
     }
 
-    // --- MANUAL ENTRY (Admin/Manager Only) ---
     public function store(Request $request) 
     {
         $validated = $request->validate([
@@ -100,11 +96,6 @@ class ParticipationController extends Controller
         return response()->json(['message' => 'Deleted successfully'], 200);
     }
 
-    // --- QR ACTIONS ---
-
-    /**
-     * Handle Time-In via QR Scan
-     */
     public function scan(Request $request)
     {
         $request->validate([
@@ -122,34 +113,28 @@ class ParticipationController extends Controller
         return DB::transaction(function () use ($request) {
             $scannedId = $request->input('student_id'); 
             
-            // FIX: Try to find by Primary Key (ID) first (Flutter sends this)
             $student = Student::find($scannedId);
 
-            // If not found, try to find by School ID String (Raw QR scan)
             if (!$student) {
                 $student = Student::where('student_id', $scannedId)->first();
             }
 
             if (!$student) {
-                // This 404 is what was causing your "Server Error: 404" in Flutter
                 return response()->json(['status' => 'error', 'message' => 'Student ID not found in database.'], 404);
             }
 
-            // 3. Check for existing participation using the resolved Primary Key ($student->id)
             $existing = Participation::where('student_id', $student->id)
                 ->where('event_id', $request->event_id)
                 ->lockForUpdate()
                 ->first();
 
-            // Scenario: Already In (Time out is null)
             if ($existing && $existing->time_out === null) {
                 return response()->json([
                     'status' => 'already_in', 
                     'message' => 'Student is already timed in.'
-                ], 422); // Use 422 so Flutter knows it's a logical "error" not a server error
+                ], 422); 
             }
 
-            // Scenario: Already Completed
             if ($existing && $existing->time_out !== null) {
                  return response()->json([
                     'status' => 'error', 
@@ -157,7 +142,6 @@ class ParticipationController extends Controller
                 ], 422);
             }
 
-            // Scenario: New Entry
             Participation::create([
                 'student_id' => $student->id, // Use Database PK
                 'event_id' => $request->event_id,
@@ -168,9 +152,6 @@ class ParticipationController extends Controller
         });
     }
 
-    /**
-     * Handle Time-Out via Confirmation
-     */
     public function timeOut(Request $request)
     {
         $request->validate([
@@ -188,7 +169,6 @@ class ParticipationController extends Controller
         return DB::transaction(function () use ($request) {
             $scannedId = $request->input('student_id'); 
             
-            // FIX: Same robust check here
             $student = Student::find($scannedId);
             if (!$student) {
                 $student = Student::where('student_id', $scannedId)->first();
@@ -198,7 +178,6 @@ class ParticipationController extends Controller
                  return response()->json(['status' => 'error', 'message' => 'Student ID required for timeout.'], 404);
             }
             
-            // 2. Find Participation
             $participation = Participation::where('student_id', $student->id)
                 ->where('event_id', $request->event_id)
                 ->whereNull('time_out')
@@ -219,7 +198,7 @@ class ParticipationController extends Controller
     {
         $request->validate([
             'event_id' => 'required|exists:events,id',
-            'student_id' => 'required' // String ID
+            'student_id' => 'required' 
         ]);
 
         $student = Student::where('student_id', $request->student_id)->first();
@@ -233,13 +212,13 @@ class ParticipationController extends Controller
             ->first();
 
         if (!$participation) {
-            return response()->json(['status' => 'none']); // Ready for Time In
+            return response()->json(['status' => 'none']); 
         }
 
         if ($participation->time_out === null) {
-            return response()->json(['status' => 'active']); // Ready for Time Out
+            return response()->json(['status' => 'active']); 
         }
 
-        return response()->json(['status' => 'completed']); // Already done
+        return response()->json(['status' => 'completed']); 
     }
 }

@@ -12,18 +12,15 @@ class DatabaseSeeder extends Seeder
 {
     public function run()
     {
-        // 1. Create the Admin (Keep this)
+        // Pregenerate admin acc
         User::factory()->create([
             'name' => 'Admin User',
             'email' => 'admin@example.com',
-            'is_admin' => true, // Assuming you handle admin flag here
+            'is_admin' => true, 
         ]);
 
-        // REMOVED: $regularUser creation. 
-        // We want the students to generate their own User accounts via the Observer.
 
-        // 2. Create Mitz Ignacio
-        // DO NOT pass 'user_id'. The Observer will create the user '23-0613'.
+        // Create Mitz Ignacio
         \App\Models\Student::factory()->create([
             'student_id' => '23-0613',
             'lrn' => '103298100017',
@@ -34,9 +31,9 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // 3. Create Shaine Paolo Valdez
-        // DO NOT pass 'user_id'. The Observer will create the user '23-0622'.
         \App\Models\Student::factory()->create([
             'student_id' => '23-0622',
+            'lrn' => '103298100017',
             'name' => 'Shaine Paolo Valdez',
             'course' => 'BSIT',
             'year_lvl' => 3,

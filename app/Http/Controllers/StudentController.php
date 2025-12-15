@@ -15,7 +15,6 @@ class StudentController extends Controller
     {
         $query = Student::query();
 
-        // 1. Handle Search
         if ($request->has('search') && $request->filled('search')) {
             $search = $request->input('search');
             $query->where(function($q) use ($search) {
@@ -26,10 +25,8 @@ class StudentController extends Controller
             });
         }
 
-        // 2. Sort
         $query->orderBy('created_at', 'desc');
 
-        // 3. Dynamic Pagination
         $perPage = $request->input('per_page', 15);
         $students = $query->paginate($perPage); 
         
@@ -38,7 +35,6 @@ class StudentController extends Controller
 
     public function listAll()
     {
-        // Only fetch ID, Name, and Student ID. Don't fetch created_at, etc.
         $students = Student::select('id', 'name', 'student_id')
             ->orderBy('name')
             ->get();

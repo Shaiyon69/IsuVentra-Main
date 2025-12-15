@@ -13,7 +13,6 @@ class AuthController extends Controller
 {
     public function register(Request $request)
     {
-        // Standard registration still enforces email format for admins/regular users
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
@@ -36,33 +35,26 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        // 1. Validation: Just ensure strings are present
         $validated = $request->validate([
             'email' => 'required|string', 
             'password' => 'required|string',
         ]);
 
-        // 2. Direct Lookup (No modification)
-        // This will find "admin@gmail.com" OR "23-0001" exactly as typed.
         $user = User::where('email', $validated['email'])->first();
 
-        // 3. Verify Password
         if (!$user || !Hash::check($validated['password'], $user->password)) {
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
 
-        // 4. Generate Token
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        // 5. CRITICAL: Load the student relationship
-        // This ensures frontend gets auth.user.student.student_id
         $user->load('student');
 
         return response()->json([
             'message' => 'Login successful as '. $user->name,
             'access_token' => $token,
             'token_type' => 'Bearer',
-            'user' => $user, // Return the full object with relationship loaded
+            'user' => $user, 
         ]);
     }
 

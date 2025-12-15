@@ -115,20 +115,16 @@ router.beforeEach(async (to, from, next) => {
     const requiredRole = to.meta.role;
     const userRole = auth.role;
 
-    // FIX 2: Handle Sub-Admin Logic
-    // If the route requires 'admin', but the user is 'sub-admin', ALLOW IT.
     if (requiredRole === 'admin' && userRole === 'sub-admin') {
       return next();
     }
 
-    // Standard Mismatch Check
     if (requiredRole && requiredRole !== userRole) {
-      // FIX 3: Prevent infinite redirect by checking if we are already at the target
       if (auth.isAdmin) {
-        if (to.name === 'admin-dashboard') return next(); // Already there, let it pass
+        if (to.name === 'admin-dashboard') return next(); 
         return next({ name: "admin-dashboard" });
       } else {
-        if (to.name === 'dashboard') return next(); // Already there
+        if (to.name === 'dashboard') return next(); 
         return next({ name: "dashboard" });
       }
     }

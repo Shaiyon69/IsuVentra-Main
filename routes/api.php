@@ -10,11 +10,7 @@ use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Middleware\AdminCheck;
 
-/*
-|--------------------------------------------------------------------------
-| PUBLIC / OPEN ROUTES (No Login Required)
-|--------------------------------------------------------------------------
-*/
+
 
 // Auth
 Route::controller(AuthController::class)->group(function () {
@@ -22,11 +18,6 @@ Route::controller(AuthController::class)->group(function () {
     Route::post('/login', 'login');
 });
 
-/*
-|--------------------------------------------------------------------------
-| PROTECTED ROUTES (Login Required)
-|--------------------------------------------------------------------------
-*/
 Route::middleware('auth:sanctum')->group(function () {
 
     // COMMON ROUTES
@@ -77,9 +68,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/logout', [AuthController::class, 'logout']);
 
-    // QR Code Actions (Students need this)
-   
-
 
     //ADMIN EXCLUSIVE ROUTES
     Route::middleware([AdminCheck::class])->group(function () {
@@ -88,7 +76,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/analytics/forecast', [AnalyticsController::class, 'getForecast']);
         Route::get('/analytics/stats', [AnalyticsController::class, 'getDashboardStats']);
 
-        // Lightweight Lists for Modals' Dropdowns
         Route::get('/list/students', [StudentController::class, 'listAll']);
         Route::get('/list/events', [EventController::class, 'listAll']);
 

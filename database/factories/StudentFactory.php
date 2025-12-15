@@ -12,7 +12,7 @@ class StudentFactory extends Factory
     {
         
         return [
-            'user_id' => null, // Let the Observer create the user!
+            'user_id' => null, 
             'student_id' => $this->faker->unique()->numerify('##-####'),
             'lrn' => $this->faker->numerify('############'), // 12 digits
             'name' => $this->faker->name(),

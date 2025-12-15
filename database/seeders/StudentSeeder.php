@@ -10,7 +10,6 @@ class StudentSeeder extends Seeder
 {
     public function run()
     {
-        // Just create students. The Observer will create the Users automatically.
         Student::factory()
             ->count(40)
             ->create(); 

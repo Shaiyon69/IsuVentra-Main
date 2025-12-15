@@ -42,29 +42,23 @@
 </template>
 
 <script setup>
-// FIXED: Added onMounted to imports
 import { computed, onMounted } from "vue"; 
 import { useAuthStore } from "@/stores/auth";
-
-// FIXED: Added api import
 import api from "@/services/api"; 
-
 import QrcodeVue from 'qrcode.vue';
 import Button from 'primevue/button';
 
 const auth = useAuthStore();
 
-// Safely access the student ID
+// Safely access student ID
 const studentId = computed(() => {
   return auth.user?.student?.student_id || auth.user?.student_id || null;
 });
 
 onMounted(async () => {
-  // If we don't have the student ID, fetch the full profile
   if (!studentId.value) {
     try {
       const res = await api.get('/user');
-      // Update the store and local storage with the new data containing the 'student' object
       auth.setAuth(res.data, auth.token);
     } catch (e) {
       console.error("Failed to refresh user profile", e);
@@ -76,7 +70,7 @@ onMounted(async () => {
 <style scoped>
 .pass-container {
   min-height: 100vh;
-  background-color: #f1f5f9; /* Slate 100 */
+  background-color: #f1f5f9; 
   display: flex;
   align-items: center;
   justify-content: center;
@@ -94,9 +88,9 @@ onMounted(async () => {
   position: relative;
 }
 
-/* Header */
+
 .card-header {
-  background: #064e3b; /* Dark Green */
+  background: #064e3b;
   color: white;
   padding: 1.5rem;
   display: flex;
@@ -124,7 +118,7 @@ onMounted(async () => {
   font-size: 0.9rem;
 }
 
-/* QR Section */
+
 .qr-section {
   padding: 2rem 1.5rem;
   background: white;

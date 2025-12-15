@@ -40,7 +40,6 @@ async function doRegister() {
   }
 
   try {
-    // backend endpoint for register
     await api.post('/register', {
       name: name.value,
       email: email.value,
@@ -49,7 +48,6 @@ async function doRegister() {
     });
 
     success.value = 'Registration successful';
-    // backend won't issue token, so redirect user to login
     setTimeout(() => {
       router.push('/login');
     }, 1000);

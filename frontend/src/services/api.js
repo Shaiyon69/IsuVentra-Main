@@ -20,10 +20,9 @@ api.interceptors.request.use((req) => {
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        // If the server returns 401 Unauthorized (Token expired or invalid)
+        // If the server return 401 Unauthorized 
         if (error.response && error.response.status === 401) {
 
-            // 1. Nuke the credentials from storage
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             window.location.href = '/';

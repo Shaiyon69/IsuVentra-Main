@@ -16,8 +16,6 @@ class EventController extends Controller
     {
         $now = Carbon::now();
         $query = Event::query();
-
-        // 1. Handle Search
         if ($request->has('search') && $request->filled('search')) {
             $search = $request->input('search');
             $query->where(function($q) use ($search) {
@@ -26,13 +24,10 @@ class EventController extends Controller
                   ->orWhere('description', 'like', "%{$search}%");
             });
         }
-
-        // 2. Sort by latest start time (or keep your preferred sort)
         $query->orderBy('time_start', 'desc');
 
         $events = $query->paginate(15)
             ->through(function ($event) use ($now) {
-                // Add the 'is_ongoing' attribute dynamically
                 $event->is_ongoing = $now->between($event->time_start, $event->time_end);
                 return $event;
             });
@@ -59,7 +54,7 @@ class EventController extends Controller
             ->orderBy('title');
 
         if ($request->has('ongoing')) {
-            $now = now(); // Current Server Time
+            $now = now();
             $query->where('time_start', '<=', $now)
                   ->where('time_end', '>=', $now);
         }
@@ -156,7 +151,6 @@ class EventController extends Controller
             'data.*.location' => 'required',
         ]);
 
-        // Transaction already implemented here
         DB::transaction(function () use ($request) {
             foreach ($request->data as $row) {
                 Event::create([

@@ -15,8 +15,6 @@ class Participation extends Model
         'time_in',
         'time_out'
     ];
-
-    // <-- Add this
     protected $casts = [
         'time_in' => 'datetime',
         'time_out' => 'datetime',

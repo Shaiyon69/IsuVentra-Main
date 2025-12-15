@@ -31,8 +31,6 @@ export const useAuthStore = defineStore('auth', {
             this.user = null;
             localStorage.removeItem('token');
             localStorage.removeItem('user_data');
-
-            // Optional: Call API to revoke token on server too
             api.post('/logout').catch(() => { });
         },
 

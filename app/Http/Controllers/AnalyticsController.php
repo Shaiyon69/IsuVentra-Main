@@ -13,23 +13,21 @@ class AnalyticsController extends Controller
 {
     public function getForecast()
     {
-        // 1. Fetch Data
-        // We load the event relationship to group by Event Title
+        //Fetch Data
         $participations = Participation::with('event')->get();
 
         if ($participations->isEmpty()) {
             return response()->json(['events' => []]);
         }
 
-        // 2. Group Data (Event -> Year -> Count)
+        //Data Grouping
         $groupedByEvent = [];
         foreach ($participations as $p) {
             if ($p->time_in && $p->event) {
-                // Normalize names (e.g. "Tech Fest 2023" -> "Tech Fest")
+
+                //Name normalize
                 $baseName = $this->getBaseEventName($p->event->title);
-                
                 try {
-                    // Robust parsing: Works even if Model casting is missing
                     $year = Carbon::parse($p->time_in)->format('Y');
                 } catch (\Exception $e) {
                     continue; // Skip invalid dates
@@ -45,14 +43,14 @@ class AnalyticsController extends Controller
             }
         }
 
-        // 3. Calculate Forecasting Metrics
+        //Forecast Calculation
         $eventsForecast = [];
         foreach ($groupedByEvent as $eventName => $yearlyData) {
-            ksort($yearlyData); // Ensure years are 2022, 2023, 2024...
+            ksort($yearlyData);
             $years = array_keys($yearlyData);
             $actualCounts = array_values($yearlyData);
 
-            // Constraint: We need at least 2 data points to draw a line
+            //Sufficient Data Check
             if (count($years) < 2) {
                 $eventsForecast[$eventName] = [
                     'message' => 'Insufficient historical data (Needs 2+ years).',
@@ -66,8 +64,7 @@ class AnalyticsController extends Controller
             $movingAvg = $this->calculateMovingAverage($actualCounts, 3);
             $expSmooth = $this->calculateExponentialSmoothing($actualCounts, 0.4); 
             
-            // Forecast Future (Next 3 Years)
-            // Filter nulls from Moving Avg to prevent calculation errors
+            // Future Forecasts
             $cleanMovingAvg = array_values(array_filter($movingAvg, fn($v) => !is_null($v)));
             
             $forecastEs = $this->generateForecasts($expSmooth, 3);
@@ -80,7 +77,7 @@ class AnalyticsController extends Controller
                 (string) ($lastYear + 3)
             ];
 
-            // Generate "Growth/Decline" Text Analysis
+            // Text analysis generate
             $analysis = $this->generatePrescriptiveAnalysis($actualCounts, $forecastEs);
 
             // Final Structure
@@ -99,10 +96,6 @@ class AnalyticsController extends Controller
 
         return response()->json(['events' => $eventsForecast]);
     }
-
-    // ====================================
-    //  PRIVATE MATH HELPERS
-    // ====================================
 
     private function getBaseEventName($title) {
         $parts = explode(' ', $title);
@@ -188,13 +181,12 @@ class AnalyticsController extends Controller
 
     public function getDashboardStats()
     {
-        // 1. Card Counts (Fast aggregate queries)
+        //Dashboard Card Counts 
         $totalStudents = Student::count();
         $totalEvents = Event::count();
         $totalParticipations = Participation::count();
 
-        // 2. Main Chart Data (Group by Event)
-        // This gives us the total count per event without loading all rows
+        // Main Chart Data (Group by Event)
         $eventPopularity = DB::table('participations')
             ->join('events', 'participations.event_id', '=', 'events.id')
             ->select('events.title', DB::raw('count(*) as total'))
