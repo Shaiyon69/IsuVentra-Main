@@ -33,7 +33,7 @@ class DatabaseSeeder extends Seeder
         // 3. Create Shaine Paolo Valdez
         \App\Models\Student::factory()->create([
             'student_id' => '23-0622',
-            'lrn' => '103298100017',
+            'lrn' => '103298100018',
             'name' => 'Shaine Paolo Valdez',
             'course' => 'BSIT',
             'year_lvl' => 3,
