@@ -59,7 +59,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
               const SizedBox(height: 16),
 
-              // --- STATS GRID (Admin View: Totals) ---
+              // Status Grid
               GridView.count(
                 crossAxisCount: 2,
                 crossAxisSpacing: 16,
@@ -110,7 +110,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
               const SizedBox(height: 12),
 
-              // --- EVENTS LIST ---
+              // Event List
               if (provider.isLoading && top5RecentEvents.isEmpty)
                 Center(
                   child: Padding(
